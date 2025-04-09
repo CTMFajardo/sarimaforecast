@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+      crossorigin="anonymous"
+    />
+    
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
+    <style>
+        .navbar {
+            overflow: visible; /* Ensure dropdowns are visible */
+            background-color: #333;
+            position: fixed; /* Set the navbar to fixed position */
+            top: 0; /* Position the navbar at the top of the page */
+            width: 100%; /* Full width */
+            z-index: 1000; /* Ensure the navbar is on top of other elements */
+        }
+        .alert {
+            position: fixed; /* Make the alert fixed to stay on top */
+            top: 70px; /* Adjust as needed */
+            left: 50%; /* Center the alert */
+            transform: translateX(-50%);
+            z-index: 1100; /* Higher than navbar to stay on top */
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .container-fluid {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 70px; /* Adjust margin to account for fixed navbar */
+        }
+        .form-container, .table-container {
+            width: 48%;
+        }
+    </style>
+    <title>{% block title %}Home{% endblock %}</title>
+
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-toggle="collapse"
+      data-target="#navbar"
+    >
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar">
+        <div class="navbar-nav">
+            {% if user.is_authenticated %}
+            <font size="5", color="white"><p>Hi {{ current_user.last_name }}!</p></font>
+            {% endif %}
+            {% if user.is_authenticated %}
+            
+            <a class="nav-item nav-link" id="home" href="/">Home</a>
+            {% if user.position != "Clerk" %}
+            <a class="nav-item nav-link" id="ingredients" href="/ingredients">Ingredients</a>
+            <a class="nav-item nav-link" id="recipecreate" href="/recipecreate">Recipe</a>
+            <!--<li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Recipe
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                <a class="dropdown-item" id="recipelist" href="/recipelist">View Recipe</a>
+                <a class="dropdown-item" id="recipecreate" href="/recipecreate">Create Recipe</a>
+              </div>
+            </li>-->
+            {% endif %}
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Daily Report Update
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                <a class="dropdown-item" id="inventory" href="/inventory">Inventory</a>
+                <a class="dropdown-item" id="dailyusage" href="/dailyusage">Daily Sold Menu Items</a>
+              </div>
+            </li>
+            <a class="nav-item nav-link" id="forecast" href="/forecast">Forecast</a>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Accounts
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                {% if user.position == "Manager" or user.position == "admin" %}
+                <a class="dropdown-item" id="createaccount" href="/createaccount">Manage Accounts</a>
+                {% endif %}
+                <a class="dropdown-item" id="editaccount" href="/editaccount">Check Profile</a>     
+              </div>
+            </li>
+            
+            <a class="nav-item nav-link" id="logout" href="/logout">Logout</a>            
+            {% else %}
+            
+            <a class="nav-item nav-link" id="login" href="/login">Login</a>
+            {% endif %}
+          </div>
+          <div class="ml-auto">
+            <span class="navbar-text">
+                {{ dateToday }}
+            </span>
+        </div>
+    </div>
+  </nav>
+
+
+
+
+
+
+
+
+    {% with messages = get_flashed_messages(with_categories=true) %} 
+    {% if messages %} 
+      {% for category, message in messages %} 
+        {% if category == 'error' %}
+          <div class="alert alert-danger alter-dismissable fade show" role="alert">
+          {{ message }}
+          <button type="button" class="close" data-dismiss="alert">
+          <span aria-hidden="true">&times;</span>
+          </button>
+          </div>
+        {% else %}
+          <div class="alert alert-success alter-dismissable fade show" role="alert">
+          {{ message }}
+          <button type="button" class="close" data-dismiss="alert">
+          <span aria-hidden="true">&times;</span>
+          </button>
+          </div>
+        {% endif %} 
+      {% endfor %} 
+    {% endif %} 
+    {% endwith %}
+
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+
+
+  <script
+    src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+    crossorigin="anonymous"
+  ></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+    crossorigin="anonymous"
+  ></script>
+  <script
+    src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"
+  ></script>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
+  
+  
+<script>
+  function togglePasswordVisibility(fieldId) {
+      var passwordField = document.getElementById(fieldId);
+  
+      if (passwordField.type === "password") {
+          passwordField.type = "text";
+      } else {
+          passwordField.type = "password";
+      }
+  }
+  </script>
+<script>
+    $(document).ready(function() {
+        $('.datatable').DataTable();
+    });
+</script>
+</body>
+
+</html>

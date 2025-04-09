@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %} Home {% endblock %} 
+
+{% block content %} 
+<br><br><br><br>
+<h3>Daily Summary </h3>
+<br>
+
+<section class="section dashboard">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Left side -->
+            <div class="col-lg-8">
+                <div class="row">
+                    
+                    <div class="col-12">
+                        <!-- Inventory card -->
+                        <div class="card overflow-auto">
+                            <h5 class="card-header">
+                                Below Minimum Stocks
+                            </h5>
+                            <div class="card-body">
+                                <h6 class="card-title">From Inventory: {{ stockDate }}, {{ latestInvWord }}</h6>
+                                {% if stockCheck %}
+                                <table class="table table-borderless datatable">                   
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Ingredient name</th>
+                                            <th scope="col">Quantity</th>
+                                            <th scope="col">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for stockEntry in latestInventoryEntry %}
+                                            {% for ingredient in allIngredients %}
+                                                {% if ingredient.ingredientName == stockEntry.inventoryItem %}
+                                                    {% if stockEntry.quantity < ingredient.minimumStock %}
+                                                        <tr>
+                                                            <td>{{ stockEntry.inventoryItem }}</td>
+                                                            <td>{{ stockEntry.quantity }}</td>
+                                                            {% if stockEntry.quantity >= ingredient.minimumStock * 0.6 and stockEntry.quantity < ingredient.minimumStock %}
+                                                            <td><span class="badge badge-pill badge-warning">Warning</span></td>
+                                                            {% elif stockEntry.quantity < ingredient.minimumStock * 0.6 %}
+                                                            <td><span class="badge badge-pill badge-danger">Danger</span></td>
+                                                            {% elif stockEntry.quantity == 0 %}
+                                                            <td><span class="badge badge-pill badge-dark">Out of Stock</span></td>
+                                                            {% else %}
+                                                            <td><span class="badge badge-pill badge-success">Good</span></td>
+                                                            {% endif %}
+                                                        </tr>  
+                                                    {% endif %}                                                                                    
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endfor %}                     
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <p>All stocks are above minimum!</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#collapseStocks" aria-expanded="false" aria-controls="collapseExample">
+                                Legend
+                            </button>
+                            <div class="collapse" id="collapseStocks">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Status</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="badge badge-pill badge-success">Good</span></td>
+                                            <td>Above minimum stock</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-pill badge-warning">Warning</span></td>
+                                            <td>60%-100% of stock</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-pill badge-danger">Danger</span></td>
+                                            <td>1%-60% of stock</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-pill badge-dark">Out of Stock</span></td>
+                                            <td>Out of stock</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!--end of inventory card-->
+                        <br>
+                        <!--start daily sales-->
+                        <div class="card overflow-auto">
+                            <h5 class="card-header">
+                                Daily Ordered Items
+                            </h5>
+                            <div class="card-body">
+                                <h6 class="card-title">From Sales date: {{ latestSalesDateWords }}</h6>
+                                
+                                <div class="dropdown">
+                                    <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-expanded="false">
+                                      Select Date
+                                    </a>
+                                    
+                                    <div class="dropdown-menu">
+                                    {% for date in dailySalesDate %}
+                                      <a class="dropdown-item" href="{{ url_for('views.home', salesDateQuery=date) }}">{{ date }}</a>
+                                    {% endfor %}
+                                    </div>
+                                </div>
+                                <br>
+
+                                <table class="table table-borderless datatable">                   
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Menu item</th>
+                                            <th scope="col">Quantity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for menuEntry in latestOrderedEntries %}
+                                            <tr>
+                                                <td>{{ menuEntry.recipeItem }}</td>
+                                                <td>{{ menuEntry.quantity }}</td>
+                                            </tr>  
+                                        {% endfor %}                     
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h5 class="card-header">
+                                Graph
+                            </h5>
+                            <div class="card-body">
+                                
+                                {{ graph|safe }}
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <!--end daily sales-->  
+                </div>
+
+            </div><!--End of Left Side-->
+            <div class="col-lg-4"><!--Start right side-->
+                <div class="card"> <!--Menu ordered Breakdown-->
+                    <h5 class="card-header">Placeholder Graph</h5>
+                    <div class="card-body">
+                        <form method="POST">
+                            <div>
+                                <label for="checkInventory">Placeholder Ordered:</label>
+                                <input type="date" id="checkInventory" name="checkOrdered">
+                                <button type="submit" class="btn btn-secondary" name="action" value="checkOrdered">Check Ordered</button>
+                                <br><br>
+                            </div>
+                        </form>
+                        <p>graph</p>
+                        <div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+                <br>
+                <div class="card"> <!--Inventory Logs-->
+                    <h5 class="card-header">Empty Inventory Dates</h5>
+                    <div class="card-body">
+                        
+                        {% if dateInvenNoEntries %}
+                        
+                        <div>
+                            <table class="table table-borderless datatable">                   
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Inventory Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for date in dateInvenNoEntries %}
+                                    <tr>
+                                        <td><a href="{{ url_for('views.inventory', date=date) }}">{{ date }}</a></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <img src="https://hotidioms.files.wordpress.com/2018/01/green-thumb.png?w=242&h=242" alt="Green Thumb Image">
+                        <p>Inventory is updated!</p>
+                        {% endif %}
+                        <br>                        
+                        <p>*Note: If there is a date in the database that is not updated, it will appear here*</p>
+                    </div>
+                </div>
+                <br>
+                <div class="card"> <!--Ordered Logs-->
+                    <h5 class="card-header">Empty Daily Ordered Dates</h5>
+                    <div class="card-body">
+                        
+                        {% if datesMenuUsedNoEntries %}   
+                            <div>                           
+                                <table class="table table-borderless datatable">                   
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Daily Ordered Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for date in datesMenuUsedNoEntries %}
+                                        <tr>
+                                            <td><a href="{{ url_for('views.dailyusage', date=date) }}">{{ date }}</a></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <img src="https://hotidioms.files.wordpress.com/2018/01/green-thumb.png?w=242&h=242" alt="Green Thumb Image">
+                            <p>Database is updated!</p>
+                        {% endif %}
+                        <br>                        
+                        <p>*Note: If there is a date in the database that is not updated, it will appear here*</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+
+
+
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %} {% block title %} Login {% endblock %} {% block
+    content %}
+    <br><br><br><br>
+    <h1></h1>
+    
+    <form method="POST">
+        <h3 align="center">Login</h3>
+        <div class="form-group">
+          <label for="user_name">Username</label>
+          <input
+            type="text"
+            class="form-control"
+            id="user_name"
+            name="user_name"
+            placeholder="Enter Username"
+          />
+        </div>
+    
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            class="form-control"
+            id="password"
+            name="password"
+            placeholder="Enter password"
+          />
+        </div>
+        <input type="checkbox" onclick="togglePasswordVisibility('password')">Show Password
+        <br>
+        <br>
+        <button type="submit" class="btn btn-secondary"  name="action" value="login">Login</button>
+        <br>
+        <!--{% if adminAcct == False %}
+        <div>
+          <button type="submit" class="btn btn-secondary" name="action" value="addAcct">Button buton</button>
+        </div>
+        {% endif %}-->
+      </form>
+      
+    {% endblock %}
+    

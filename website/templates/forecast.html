@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+{% block title %} Forecast {% endblock %} 
+
+{% block content %}
+<br><br><br><br> Forecast
+<br>
+<br>
+
+
+<div class="row">
+    <!-- Days to Forecast Card (Left) - 8 parts of the container -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Days to forecast</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Start of row for side-by-side input fields -->
+                    <div class="row">
+                        <!-- First input (From Date) -->
+                        <div class="col-md-6">
+                            <label for="dtFrom">From Date:</label>
+                            <input type="date" id="dtFrom" name="dtFrom" class="form-control" onchange="SetMinDate(this); updateForecastDays();" style="text-align:center;" max="">
+                        </div>
+                        <!-- Second input (To Date) -->
+                        <div class="col-md-6">
+                            <label for="dtTo">To Date:</label>
+                            <input type="date" id="dtTo" name="dtTo" class="form-control" onchange="SetMaxDate(this); updateForecastDays();" style="text-align:center;" min="">
+                        </div>
+                    </div>
+                    <!-- End of row -->
+                    
+                    <!-- Display the number of days to forecast -->
+                    <div style="margin-top: 10px; font-size: 16px;">
+                        <label for="forecastDaysInput">You are forecasting for </label>
+                        <input type="text" id="forecastDaysInput" name="forecastDaysInput" class="form-control" readonly style="width: auto; display: inline-block; text-align: center;">
+                        <label for="forecastDaysInput"> days.</label>
+                        <input type="hidden" id="minusCurrentDate" name="minusCurrentDate">
+                        
+                        <button type="submit" id="forecastBtn" class="btn btn-secondary"  name="action" value="forecast" disabled>Forecast</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div>
+            <br>
+            <div class="card"><!--forecast details-->>
+                <div class="card-header" id="forecastRangeHeader">
+                    <h3>Forecasted Quantity from {{ dt_from }} to {{ dt_to }}</h3>
+                    <input type="hidden" id="dtFromHidden" value="{{ dt_from_raw }}">
+                    <input type="hidden" id="dtToHidden" value="{{ dt_to_raw }}">
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped" id="forecastTable">
+                            <thead>
+                                <tr>
+                                    <th>Recipe Name</th>
+                                    <th>Total Forecasted Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in forecastSummary %}
+                                <tr>
+                                <td><a href="#" class="recipe-link" data-recipe="{{ item.recipe }}">{{ item.recipe }}</a></td>
+                                <td>{{ "%.0f"|format(item.total) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="card"><!--Grocery list-->
+                <div class="card-header" id="groceryListHeader">
+                    <h3>Grocery List</h3>
+                </div>
+                <div class="card-body">
+                    <button type="submit" id="groceryBtn" class="btn btn-secondary"  name="action" value="grocery">Generate Grocery List</button>
+                    <br>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped" id="groceryListTable">
+                            <thead>
+                                <tr>
+                                    <th>Ingredient Name</th>
+                                    <th>Total Forecasted Quantity</th>
+                                    <th>Unit of Measure</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day of Last Data Entry Card (Right) - 4 parts of the container -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                Day of Last Data Entry
+            </div>
+            <div class="card-body">
+                <!-- Dynamic date shown here -->
+                <p>{{ dailyUsed.lastEntryToWords }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Table Modal -->
+<div class="modal fade" id="forecastModal" tabindex="-1" aria-labelledby="forecastModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="forecastModalLabel">Forecast Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <table class="table table-bordered" id="forecastDetailsTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Forecasted Quantity</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+<script>
+    // Function to format the date as YYYY-MM-DD
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // Function to set today's date as the min date for the "From" input and set "To" input accordingly
+    function setTodayMinDate() {
+      const today = new Date();
+      const todayFormatted = formatDate(today);  // Format today's date
+      const dtFrom = document.getElementById("dtFrom");
+      const dtTo = document.getElementById("dtTo");
+
+      // Set the "min" attribute of the "dtFrom" input to today's date
+      dtFrom.setAttribute("min", todayFormatted);
+      // Set the "min" attribute of the "dtTo" input to today's date as well
+      dtTo.setAttribute("min", todayFormatted);
+    }
+
+    // Function to set the "min" attribute of the "To" input based on the "From" input
+    function SetMinDate(input) {
+      const dtFrom = document.getElementById("dtFrom");
+      const dtTo = document.getElementById("dtTo");
+      const fromDate = new Date(dtFrom.value); // Get the selected date from the "dtFrom" input
+
+      if (dtFrom.value) {
+        // Set the "min" attribute of the "dtTo" input to the selected "dtFrom" value
+        dtTo.setAttribute("min", dtFrom.value);
+      } else {
+        dtTo.removeAttribute("min"); // Remove the "min" if "dtFrom" is empty
+      }
+    }
+
+    // Function to set the "max" attribute of the "From" input based on the "To" input
+    function SetMaxDate(input) {
+      const dtFrom = document.getElementById("dtFrom");
+      const dtTo = document.getElementById("dtTo");
+      const toDate = new Date(dtTo.value); // Get the selected date from the "dtTo" input
+
+      if (dtTo.value) {
+        // Set the "max" attribute of the "dtFrom" input to the selected "dtTo" value
+        dtFrom.setAttribute("max", dtTo.value);
+      } else {
+        dtFrom.removeAttribute("max"); // Remove the "max" if "dtTo" is empty
+      }
+    }
+
+    // Function to calculate the number of days between "From" and "To" dates
+    function updateForecastDays() {
+      const dtFrom = document.getElementById("dtFrom");
+      const dtTo = document.getElementById("dtTo");
+
+      const fromDate = new Date(dtFrom.value);
+      const toDate = new Date(dtTo.value);
+
+      if (dtFrom.value && dtTo.value) {
+        // Calculate the difference in time (in milliseconds)
+        const diffTime = toDate - fromDate;
+        const diffDays = diffTime / (1000 * 3600 * 24); // Convert milliseconds to days
+
+        // Display the number of days in the input field
+        document.getElementById("forecastDaysInput").value = diffDays +1;
+      } else {
+        // If either of the dates is not selected, set days to 0
+        document.getElementById("forecastDaysInput").value = "0";
+      }
+    }
+
+    // Function to normalize a date to midnight (00:00:00) to only compare the date part
+    function normalizeDate(date) {
+        const normalized = new Date(date);
+        normalized.setHours(0, 0, 0, 0);  // Set to midnight (00:00:00)
+        return normalized;
+    }
+
+    // Function to calculate the difference between 'From' date and current date
+    function calculateDateDifference() {
+        const dtFrom = document.getElementById("dtFrom").value;
+        if (dtFrom) {
+            const dtFromDate = normalizeDate(new Date(dtFrom));  // Normalize the 'From' date to midnight
+            const today = normalizeDate(new Date());  // Normalize today's date to midnight
+
+            const timeDiff = dtFromDate - today;  // Time difference in milliseconds
+            const dayDiff = timeDiff / (1000 * 3600 * 24);  // Convert to days
+
+            // Update the value of the "minusCurrentDate" (whether visible or hidden) with the date difference
+            document.getElementById("minusCurrentDate").value = dayDiff.toFixed(0);  // Round to nearest integer
+        } else {
+            // If no 'From Date' is selected, set the value to 0
+            document.getElementById("minusCurrentDate").value = "0";
+        }
+    }
+    // Trigger date difference calculation when the 'From Date' is changed
+    document.getElementById("dtFrom").addEventListener("change", function() {
+        calculateDateDifference();  // Recalculate the difference whenever the user selects a "From Date"
+    });
+    
+    document.addEventListener("DOMContentLoaded", function () {
+    const forecastInput = document.getElementById("forecastDaysInput");
+    const forecastBtn = document.getElementById("forecastBtn");
+
+    function toggleForecastBtn() {
+      const value = parseInt(forecastInput.value);
+      forecastBtn.disabled = isNaN(value) || value <= 0;
+    }
+
+    // Run every half second to check if value has changed
+    setInterval(toggleForecastBtn, 500);
+    });
+    
+    //document.addEventListener('DOMContentLoaded', function () {
+    //const forecastBtn = document.getElementById('forecastBtn');
+
+    //forecastBtn.addEventListener('click', function (event) {
+        //event.preventDefault(); // Prevent form submission if it's inside a form
+        //fetchForecastTable();
+    //});
+    //});
+
+    // Function to fetch the forecast table and update the table
+    /*document.addEventListener('DOMContentLoaded', function () {
+    const recipeLinks = document.querySelectorAll('.recipe-link');
+
+    recipeLinks.forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const recipeName = this.dataset.recipe;
+
+            fetch(`/get_forecast_details/${encodeURIComponent(recipeName)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.querySelector('#forecastDetailsTable tbody');
+                    tbody.innerHTML = '';
+
+                    data.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${row.date}</td><td>${Math.round(row.forecast)}</td>`;
+                        tbody.appendChild(tr);
+                    });
+
+                    document.querySelector('#forecastModalLabel').textContent = `Forecast Details: ${recipeName}`;
+                    new bootstrap.Modal(document.getElementById('forecastModal')).show();
+                })
+                .catch(err => {
+                    console.error('Error fetching forecast details:', err);
+                });
+        });
+    });
+    }); */
+
+    document.addEventListener('DOMContentLoaded', function () {
+    const recipeLinks = document.querySelectorAll('.recipe-link');
+
+    recipeLinks.forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const recipeName = this.dataset.recipe;
+
+            // Get the date range from hidden inputs
+            const dtFrom = document.getElementById('dtFromHidden').value;
+            const dtTo = document.getElementById('dtToHidden').value;
+
+            // Construct URL with query parameters
+            let url = `/get_forecast_details/${encodeURIComponent(recipeName)}`;
+            if (dtFrom && dtTo) {
+                url += `?dtFrom=${dtFrom}&dtTo=${dtTo}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.querySelector('#forecastDetailsTable tbody');
+                    tbody.innerHTML = '';
+
+                    data.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${row.date}</td><td>${Math.round(row.forecast)}</td>`;
+                        tbody.appendChild(tr);
+                    });
+
+                    document.querySelector('#forecastModalLabel').textContent = `Forecast Details: ${recipeName}`;
+                    new bootstrap.Modal(document.getElementById('forecastModal')).show();
+                })
+                .catch(err => {
+                    console.error('Error fetching forecast details:', err);
+                });
+                });
+            });
+        });
+
+    document.addEventListener('DOMContentLoaded', function () {
+    const groceryBtn = document.getElementById('groceryBtn');
+
+    // Enable groceryBtn only if forecastTable has rows
+    const forecastTableRows = document.querySelectorAll('#forecastTable tbody tr');
+    if (forecastTableRows.length > 0) {
+        groceryBtn.removeAttribute('disabled');
+    }
+
+    groceryBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        const dtFrom = document.getElementById('dtFromHidden').value;
+        const dtTo = document.getElementById('dtToHidden').value;
+
+        fetch(`/get_grocery_list?dt_from=${dtFrom}&dt_to=${dtTo}`)
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.querySelector('#groceryListTable tbody');
+                tbody.innerHTML = ''; // Clear previous results
+
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.ingredient}</td>
+                        <td>${Math.round(row.total)}</td>
+                        <td>${row.unit}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading grocery list:', error);
+            });
+        });
+    });
+
+    window.onload = function() {
+    setTodayMinDate();  // Set min dates for From and To inputs
+    document.getElementById("forecastDaysInput").value = "0";  // Initialize forecast days to 0
+    calculateDateDifference();  // Calculate and set the hidden input value
+    };
+
+</script>
+
+<!--
+    <div class="card">
+        <h5 class="card-header">
+            Step 1 : Create or Load a Model
+        </h5>
+        <div class="card-body">
+            <form method="POST">
+                <div>
+                    <button type="submit" class="btn btn-secondary" name="action" value="trainModel">Train Model</button>
+                    <br><p>or</p>
+                    <button type="submit" class="btn btn-secondary" name="action" value="loadModel">Load Model</button>
+                    <br>
+                    {% if modDate %}
+                    <p>Model last trained on: {{ modDate }}</p>
+                    {% endif %}
+                </div>
+                
+                
+            </form>
+        </div>
+        <div class="card-footer">
+            *Note 1: 
+            {% if models %}
+            <span class="badge badge-pill badge-success">Models Loaded</span> 
+            {% else %}
+            <span class="badge badge-pill badge-danger">No Models Loaded</span> 
+            {% endif %}
+        </div>
+    </div>
+    <br>
+    <div class="card"> 
+        <h5 class="card-header">
+            Step 2 : Forecast
+        </h5>
+        <div class="card-body">
+            <form method="POST">
+                <table>
+                    <tbody>                          
+
+                      <tr>
+                        <td><b>How Many Days to Forecast: </b></td>
+                        <td>
+                          <input
+                            type="number"     
+                            id="minimumDays"
+                            name="minimumDays"
+                            placeholder="Minimum Days"
+                            min="1" 
+                            oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"
+                          />                 
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                <div>
+                    <button type="submit" class="btn btn-secondary" name="action" value="forecast">Forecast</button>
+                </div>
+                
+                
+            </form>
+        </div>
+        <div class="card-footer">
+            *Note:
+        </div>
+    </div>
+    <br>
+    <div class="card">
+        <h5 class="card-header">Step 3: Predictions</h5>
+        <div class="card-body">
+            {% if predictions %}
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>Recipe Item</th>
+                        <th>Date</th>
+                        <th>Predicted Quantity</th>
+                        <th>Lower Bound</th>
+                        <th>Upper Bound</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for forecast in predictions %}
+                    <tr>
+                        <td>{{ forecast.recipe_item }}</td>
+                        <td>{{ forecast.date }}</td>
+                        <td>{{ forecast.forecasted_quantity }}</td>
+                        <td>{{ forecast.ci_lower }}</td>
+                        <td>{{ forecast.ci_upper }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <td><strong>Total</strong></td>
+                        <td><strong>{{ total_forecasted_quantity }}</strong></td>
+                        <td><strong>{{ total_ci_lower }}</strong></td>
+                        <td><strong>{{ total_ci_upper }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+            {% else %}
+            <p>No predictions found, please train and predict first.</p>
+            {% endif %}
+        </div>
+        <div class="card-footer">Note: </div>
+    </div>
+
+
+<br>
+
+-->
+
+
+
+
+{% endblock %}

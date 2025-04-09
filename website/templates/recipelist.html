@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %} View Recipe {% endblock %} 
+
+{% block content %}
+    <br>
+    <h3>Recipe list</h3>
+
+    <form method="POST">
+        <div>
+            <br><br>
+            <select class="form-control form-control-sm" id="recipeListSelect" name="recipeListSelect">
+                {% for allRecipe in distinctRecipe %}
+                <option>{{ allRecipe.recipeName }}</option>
+                {% endfor %}
+            </select>
+            <br>
+            <div>
+                <button type="submit" class="btn btn-secondary" name="action" value="viewRecipe">View recipe</button>
+                <button type="submit" class="btn btn-secondary" name="action" value="removeRecipe">Delete recipe</button>
+            </div>
+        </div>
+    </form>
+    <br><br><br>
+    <h1> {{ recipeName }}</h1>
+
+    {% for filteredRecipeName in filteredRecipeName %}
+        <li>  
+        
+        {{ filteredRecipeName.quantity }} {{ filteredRecipeName.unitOfMeasure }}
+        {{ filteredRecipeName.ingredients }} 
+        <br>
+        </li>
+    {% endfor %}
+    </ul>
+
+
+{% endblock %}

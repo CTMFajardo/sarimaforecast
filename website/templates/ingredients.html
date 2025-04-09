@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %} Ingredients {% endblock %} 
+
+{% block content %}
+<br>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-8">
+      <form method="POST">
+        <h3 align="left">Ingredients</h3>
+        <br><br>
+        <div class="form-group">
+          <table>
+            <tbody>                          
+              <tr>
+                <td><b>Ingredient name: </b></td>  
+                <td>      
+                  <input
+                    type="text"        
+                    id="ingredientName"
+                    name="ingredientName"
+                    placeholder="Enter Ingredient name"/>
+                </td>
+              </tr>
+              <tr>
+                <td><b>Minimum Number of stock: </b></td>
+                <td>
+                  <input
+                    type="number"     
+                    id="minimumStock"
+                    name="minimumStock"
+                    placeholder="Minimum Stock"
+                    min="1" 
+                    oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"
+                  />                 
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <br>      
+          <div>
+            <button type="submit" class="btn btn-secondary" name="action" value="add">Add to list</button>
+          </div>
+        </div>
+        <br>
+         <div class="form-group">
+          <table>
+            <tbody>                          
+              <tr>
+                <td><b>Current Ingredients:   </b></td>  
+                <td>      
+                  <select class="form-control" id="ingredientListSelect" name="ingredientListSelect">
+                    {% for allIngredients in allIngredients %}
+                    <option>{{ allIngredients.ingredientName }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <button type="submit" class="btn btn-secondary" name="action" value="remove">Remove from list</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>  
+      </form>
+    </div>
+    
+    <div class="col-md-4">
+      <h3>Current Ingredients</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Ingredient</th>
+            <th>Minimum Stock</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for allIngredients in allIngredients %}
+          <tr>
+            <td>{{ allIngredients.ingredientName }}</td>
+            <td>{{ allIngredients.minimumStock }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

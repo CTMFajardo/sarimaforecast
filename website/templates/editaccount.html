@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %} Edit Account {% endblock %} 
+
+{% block content %}
+<br><br><br><br>
+<h1>Check Profile</h1>
+<form method="POST"  onsubmit="return confirm('Are you sure you want to submit?');">
+    <div>
+        <br>
+        
+        <div id="userInfo">
+          
+          <table class="table">
+            <thead class="thead-dark">
+              <tr>
+              <th scope="col">User Information</th>
+              <th></th>
+              <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>First Name: </td>
+                <td>{{ user.first_name }}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Last Name: </td>
+                <td>{{ user.last_name }}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Username</td>
+                <td>{{ user.user_name }}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Position: </td>
+                <td>{{ user.position }}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Password:</td>
+                <td>Hidden</td>
+                <td>            
+                  <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#collapsePassword" aria-expanded="false" aria-controls="collapseExample">
+                  Edit
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+        </table>        
+        <div class="collapse" id="collapsePassword">
+            <div class="card card-body">
+              <form method="POST" onsubmit="return confirm('Are you sure you want to submit?');">
+              <table class="table">
+                <thead class="thead-light">
+                  <tr>
+                    <th>Name</th>
+                    <th></th>
+                    <th>Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Old Password</td>
+                        <td>>></td>
+                        <td>
+                          <input
+                          type="password"
+                          class="form-control"
+                          id="oldPassword"
+                          name="oldPassword"
+                          placeholder="Enter Old password"
+                        />
+                        </td>
+                      </tr>                
+                  <tr>
+                    <td>New Password</td>
+                    <td>>></td>
+                    <td>
+                      <input
+                      type="password"
+                      class="form-control"
+                      id="newPassword"
+                      name="newPassword"
+                      placeholder="Enter New password"
+                    />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Repeat New Password</td>
+                    <td>>></td>
+                    <td>
+                      <input
+                      type="password"
+                      class="form-control"
+                      id="newPassword2"
+                      name="newPassword2"
+                      placeholder="Repeat New password"
+                    />
+                    <input type="hidden" id="passUser" name="passUser" value="{{ user.id }}">                      
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <p>Password must be at least 6 characters</p>
+              <button type="submit" class="btn btn-secondary" name="action" value="editPassword">Edit Password</button>
+              </form>
+            </div>
+          </div>
+    </div>
+</form>
+<!--<button type="submit" class="btn btn-secondary" name="action" value="forecast">Forecast</button>-->
+{% endblock %}

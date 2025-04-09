@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %} Daily Usage {% endblock %} 
+
+{% block content %}
+<br><br><br><br>
+<h1>Daily Usage</h1>
+
+<br>
+
+      
+
+
+<form method="POST" >
+    <div>
+        <label for="checkInventory">Check Daily Usage of Menu Items:</label>
+        <input type="date" id="checkOrdered" name="checkOrdered">
+        <button type="submit" class="btn btn-secondary" name="action" value="checkOrdered">Check Date</button>
+        <br><br>
+    </div>
+</form>
+
+<div>   
+  {% if checkInv %}
+  <div class="card overflow-auto">
+    <h5 class="card-header">
+      Menu ordered for {{ dateWords }}
+    </h5>
+    <div class="card-body">
+      <h6 class="card-title"></h6>
+      <table class="table table-borderless datatable">
+        <thead>
+          <tr>
+              <th>Name</th>
+              <th>Used Quantity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for allInventory in checkInv %}
+          <tr>
+              <td>{{ allInventory.recipeItem }}</td>
+              <td>{{ allInventory.quantity }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      
+      <p>Posted by: {{ postedBy }}</p>
+      {% if editDate %}
+      <p>Edited on: {{ editDate }}</p>
+      <p>Edited by: {{ editedBy }}</p>
+      <p>Authorized by: {{ editAuth }}</p>
+      {% endif %}
+      
+      <br>
+      <!--Trigger button-->
+      <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#authModal">Edit</button> 
+      <p>*This needs Supervisor authorization</p>
+    </div>  
+  </div>
+  {% endif %}
+  
+    <!-- Modal -->
+    <div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title fs-5" id="exampleModalLabel">Supervisor Authorization</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form method="POST" onsubmit="return confirm('Are you sure you want to submit?');">
+              <div class="form-group">
+                <table>
+                  <tbody>                          
+                      <tr>
+                        <td><b>Username: </b></td>  
+                        <td>      
+                          <input
+                            type="text"        
+                            id="authName"
+                            name="authName"
+                            placeholder="Enter Username"/>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><b>Password: </b></td>
+                        <td>
+                          <input
+                          type="password"     
+                          id="authPass"
+                          name="authPass"
+                          placeholder="Supervisor Password"
+                          />
+                          <input type="hidden" id="currentDate" name="currentDate" value="{{ date }}">                 
+                        </td>
+                      </tr>
+                  </tbody>
+                </table>
+                <br>      
+                <div>
+                  <button type="submit" class="btn btn-secondary" name="action" value="authSupervisor1">Authorize</button>
+                </div>
+              </div> 
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>    
+</div>
+
+<div>
+<form method="POST"  onsubmit="return confirm('Are you sure you want to submit?');">            
+    {% if dailyList %}
+    <h5>Input Menu ordered for {{ date }}</h5>
+    <table border="5">
+        <tbody>
+            <th>Name</th>
+            <th>Input Number of times Ordered</th>
+            
+            
+            </tr>
+            {% for allRecipe in dailyList %}
+                <tr>  
+                    <td>{{ allRecipe.recipeName }}</td>
+                    <td>
+                        <input type="number" id="{{ allRecipe.recipeName }}" name="{{ allRecipe.recipeName }}" 
+                            placeholder="Quantity" size="1" min="0" oninput="this.value = 
+                            !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"/>
+                        <input type="hidden" id="currentDate" name="currentDate" value="{{ date }}">
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p>Note: 'Ending Quantity' can not be empty.</p>
+
+    <br>
+    <button type="submit" class="btn btn-secondary" name="action" value="addAll">Save Menu Ordered</button>
+    {% endif %}
+</form>
+</div>
+<div>
+  <form method="POST"  onsubmit="return confirm('Are you sure you want to submit?');">
+    {% if editCurrentDate %}
+    <h5>Edit Inventory for {{ selectedDateWords }}</h5>
+    <table class="table">
+      <thead class="thead-dark">
+          <tr>   
+            <th>Name</th>
+            <th>Old Quantity</th>
+            <th class="text-center">to </th>
+            <th>New Quantity</th>
+          </thead>    
+          </tr>
+          <tbody>
+            {% for allInventory in editFilteredDate %}
+                <tr>  
+                    <td>{{ allInventory.recipeItem }}
+                      <input type="hidden" id="itemToEdit" name="itemToEdit" value="{{ allInventory.recipeItem }}">
+                    </td>
+                    <td>{{ allInventory.quantity }}</td>
+                    <td class="text-center"><p>></p></td>
+                    <td>
+                      <input type="number" id="add{{ allInventory.recipeItem }}" name="add{{ allInventory.recipeItem }}" 
+                      placeholder="New Quantity" size="1" min="0" oninput="this.value = 
+                      !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"/>
+                      
+                    </td>
+                </tr>
+            {% endfor %}
+          </tbody>
+          
+    </table>
+    <p>Note: New quantity must not be empty</p>
+    <input type="hidden" id="dateToEdit" name="dateToEdit" value="{{ editCurrentDate }}">
+    <input type="hidden" id="authUser" name="authUser" value="{{ authBy }}">
+    <br> <button type="submit" class="btn btn-secondary" name="action" value="editDailyUsage">Submit</button>  
+    
+    {% endif %}
+  
+  </form>
+</div>
+<br><br>
+<div>
+  <form method="POST">
+    <div class="card"> <!--Daily Used Graph-->
+      <h5 class="card-header">Line Graph</h5>
+      <div class="card-body">          
+        <div>
+          <table>
+            <tbody>
+              <tr>
+                <td>From: </td>
+                <td><input type="date" id="checkInventoryFrom" name="checkInventoryFrom"></td>
+              </tr>
+              <tr>
+                <td>To: </td>
+                <td><input type="date" id="checkInventoryTo" name="checkInventoryTo"></td>
+              </tr>
+              <tr>
+                <td><button type="submit" class="btn btn-secondary" name="action" value="checkDateRange">Check Ordered Items</button></td>
+              </tr>
+            </tbody>
+          </table><br><br>
+        </div>
+          <div>
+            <p>graph</p>
+          </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<br><br>
+<div>
+  <form method="POST"> <!--FOR TESTING ONLY!!-->
+    <div class="card"> <!--For database import export-->
+      <h5 class="card-header">TESTING PURPOSES, DELETE AFTER</h5>
+      <div class="card-body">
+        <button type="submit" class="btn btn-secondary" name="action" value="importCSV">Import</button>
+        <br><br>
+        <button type="submit" class="btn btn-secondary" name="action" value="exportCSV">Export</button>
+      </div>
+    </div>
+  </form>
+</div>
+<br> 
+<form method="POST" enctype="multipart/form-data" action="{{ url_for('views.handle_file_action') }}">
+  <div class="card-body">
+      <input type="file" name="file"> <!-- File input for uploading -->
+      <br><br>
+      <button type="submit" class="btn btn-secondary" name="action" value="importCSV">Import</button>
+      <br><br>
+      <button type="submit" class="btn btn-secondary" name="action" value="exportCSV">Export</button>
+  </div>
+</form>
+<!--
+<button type="submit" class="btn btn-secondary" name="action" value="deleteAll">Delete Daily Inventory</button>
+-->
+<br>
+
+{% endblock %}

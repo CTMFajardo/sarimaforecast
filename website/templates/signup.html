@@ -1,0 +1,255 @@
+{% extends "base.html" %} {% block title %} Create account {% endblock %} {% block
+    content %}
+    
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-6">
+          <form method="POST" onsubmit="return confirm('Are you sure you want to submit?');">
+            <br>
+            <h3 align="center">Create Account</h3>
+            <div class="form-group">
+              <label for="userName">Username</label>
+              <input
+                type="text"
+                class="form-control"
+                id="userName"
+                name="userName"
+                placeholder="Enter username"
+              />
+              <p>Username must be at least 4 characters</p>
+            </div>
+            <div class="form-group">
+              <label for="firstName">First Name</label>
+              <input
+                type="text"
+                class="form-control"
+                id="firstName"
+                name="firstName"
+                placeholder="Enter first name"
+              />
+              <p>First Name must be at least 2 characters</p>
+            </div>
+            <div class="form-group">
+              <label for="lastName">Last Name</label>
+              <input
+                type="text"
+                class="form-control"
+                id="lastName"
+                name="lastName"
+                placeholder="Enter last name"
+              />
+              <p>Last name must be at least 2 characters</p>
+            </div>
+            <div class="form-group">
+              <label for="password1">Password</label>
+              <input
+                type="password"
+                class="form-control"
+                id="password1"
+                name="password1"
+                placeholder="Enter password"
+              />
+              <input type="checkbox" onclick="togglePasswordVisibility('password1')">Show Password
+              <br>
+              <p>Password must be at least 6 characters</p>
+            </div>
+            <div class="form-group">
+              <label for="password2">Repeat Password</label>
+              <input
+                type="password"
+                class="form-control"
+                id="password2"
+                name="password2"
+                placeholder="Repeat password"
+              />
+              <input type="checkbox" onclick="togglePasswordVisibility('password2')">Show Password
+              <br>
+            </div>
+            <div class="form-group">
+              <label for="position">Input Position</label>
+              <select class="form-control" id="position" name="position" placeholder="Input Position Number">
+                <option>---</option>
+                <option>Supervisor</option>
+                <option>Clerk</option>
+                {% if user.position == 'admin' %}
+                <option>Manager</option>
+                {% endif %}
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <button type="submit" class="btn btn-secondary" name="action" value="addUser">Submit</button>
+            </div>
+          </form>
+        </div> <!-- Closing col-md-6 for the first column -->
+        
+        <div class="col-md-6">
+          <br>
+          <h3>Current Users</h3>
+
+          <form method="POST">
+            <table class="table">
+              <tbody>
+                <tr>
+                  <td>
+                    <select class="form-control" id="userListSelect" name="userListSelect">
+                      <option value="" disabled selected>Select User</option><!--Placeholder-->
+                      {% for allUsers in allUsers %}
+                      <option value="{{ allUsers.id }}">{{ allUsers.last_name }}, {{ allUsers.first_name }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <button type="submit" class="btn btn-secondary" name="action" value="checkUser">Check user</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </form>
+
+
+          <br>
+          {% if selectedUser %}
+          <div id="userInfo">
+            
+            <table class="table">
+              <thead class="thead-dark">
+                <tr>
+                <th scope="col">User Information</th>
+                <th></th>
+                <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>First Name: </td>
+                  <td>{{ selectedUser.first_name }}</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Last Name: </td>
+                  <td>{{ selectedUser.last_name }}</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Username</td>
+                  <td>{{ selectedUser.user_name }}</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Position: </td>
+                  <td>{{ selectedUser.position }}</td>
+                  <td>
+                    <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#collapsePosition" aria-expanded="false" aria-controls="collapseExample">
+                    Edit
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Password:</td>
+                  <td>Hidden</td>
+                  <td>            
+                    <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#collapsePassword" aria-expanded="false" aria-controls="collapseExample">
+                    Edit
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+          </table>
+          
+          <br>
+          <form method="POST" onsubmit="return confirm('Are you sure you want to delete?');">
+            <input type="hidden" id="deleteUser" name="deleteUser" value="{{ selectedUser.id }}">
+            <button type="submit" class="btn btn-secondary" name="action" value="deleteUser">Delete User</button>
+          </form>
+          </div>
+          <div class="collapse" id="collapsePosition">
+            <div class="card card-body">
+              <form method="POST" onsubmit="return confirm('Are you sure you want to submit?');">
+              <table class="table">
+                <thead class="thead-light">
+                  <tr>
+                    <th>Old Position</th>
+                    <th>to</th>
+                    <th>New Position</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{{ selectedUser.position }}</td>
+                    <td>>></td>
+                    <td>
+                      <select class="form-control" id="editPosition" name="editPosition" placeholder="Input Position">
+                        <option>---</option>
+                        <option>Supervisor</option>
+                        <option>Clerk</option>
+                        {% if user.position == 'admin' %}
+                        <option>Manager</option>
+                        {% endif %}
+                      </select>
+                      <input type="hidden" id="positionUser" name="positionUser" value="{{ selectedUser.id }}">
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <button type="submit" class="btn btn-secondary" name="action" value="editPosition">Edit Position</button>
+              </form>                
+            </div>
+          </div>
+          <div class="collapse" id="collapsePassword">
+            <div class="card card-body">
+              <form method="POST" onsubmit="return confirm('Are you sure you want to submit?');">
+              <table class="table">
+                <thead class="thead-light">
+                  <tr>
+                    <th>Name</th>
+                    <th></th>
+                    <th>Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>New Password</td>
+                    <td>>></td>
+                    <td>
+                      <input
+                      type="password"
+                      class="form-control"
+                      id="newPassword"
+                      name="newPassword"
+                      placeholder="Enter New password"
+                    />
+                    <input type="checkbox" onclick="togglePasswordVisibility('newPassword')">Show Password
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Repeat New Password</td>
+                    <td>>></td>
+                    <td>
+                      <input
+                      type="password"
+                      class="form-control"
+                      id="newPassword2"
+                      name="newPassword2"
+                      placeholder="Repeat New password"
+                    />
+                    <input type="checkbox" onclick="togglePasswordVisibility('newPassword2')">Show Password
+                    <input type="hidden" id="passUser" name="passUser" value="{{ selectedUser.id }}">                      
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <p>Password must be at least 6 characters</p>
+              <button type="submit" class="btn btn-secondary" name="action" value="editPassword">Edit Password</button>
+              </form>
+            </div>
+          </div>
+
+          {% endif %}
+
+        </div> <!-- Closing col-md-6 for the second column -->
+      </div> <!-- Closing row -->
+    </div> <!-- Closing container-fluid -->
+
+{% endblock %}
+    
