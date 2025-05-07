@@ -2,7 +2,7 @@
 {% block title %} Forecast {% endblock %} 
 
 {% block content %}
-<br><br><br><br> Forecast
+<br><br><br><br>
 <br>
 <br>
 
@@ -53,7 +53,7 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-striped" id="forecastTable">
+                        <table class="table table-bordered table-striped datatable" id="forecastTable">
                             <thead>
                                 <tr>
                                     <th>Recipe Name</th>
@@ -72,6 +72,7 @@
                     </div>
                 </div>
             </div>
+            <br>
             <div class="card"><!--Grocery list-->
                 <div class="card-header" id="groceryListHeader">
                     <h3>Grocery List</h3>
@@ -80,7 +81,7 @@
                     <button type="submit" id="groceryBtn" class="btn btn-secondary"  name="action" value="grocery">Generate Grocery List</button>
                     <br>
                     <div class="table-responsive">
-                        <table class="table table-bordered table-striped" id="groceryListTable">
+                        <table class="table table-bordered table-striped datatable" id="groceryListTable">
                             <thead>
                                 <tr>
                                     <th>Ingredient Name</th>
@@ -357,6 +358,7 @@
                     `;
                     tbody.appendChild(tr);
                 });
+                
             })
             .catch(error => {
                 console.error('Error loading grocery list:', error);

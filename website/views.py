@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, flash,redirect, url_for,send_file,current_app, jsonify
+from flask import Blueprint, render_template, request, flash,redirect, url_for,send_file,current_app, jsonify, Response
 from flask_login import login_required, current_user
 from .models import Ingredients, Recipe, Inventory, TempIngredients, dailyUsedMenuItem, User, ForecastedValues
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import plotly.graph_objs as go
 import plotly.io as pio
+import plotly.express as px
+from plotly.utils import PlotlyJSONEncoder
+import json
 
 
 #my sarima codes
@@ -62,7 +65,9 @@ def home():
     salesEntries1 = [date[0] for date in salesEntries]
     formattedDistinctDates = [date.strftime("%B %d, %Y") for date in salesEntries1]
     
-    
+    earliest_date = db.session.query(func.min(dailyUsedMenuItem.date)).scalar()
+    latest_date = db.session.query(func.max(dailyUsedMenuItem.date)).scalar()
+
 
     # Handle the selected date from dropdown
     salesDateQuery = request.args.get('salesDateQuery')
@@ -75,7 +80,7 @@ def home():
         latestDateOrdered = dailyUsedMenuItem.query.order_by(desc(dailyUsedMenuItem.date)).first().date
         latestOrderedEntries = dailyUsedMenuItem.query.filter_by(date=latestDateOrdered).all()
         latestSalesDateWords = latestDateOrdered.strftime("%B %d, %Y")
-
+    """
     #generate bargraph
     dailyItems = [item.recipeItem for item in latestOrderedEntries]
     quantities = [item.quantity for item in latestOrderedEntries]
@@ -101,7 +106,7 @@ def home():
     # Close the plot to release resources
     plt.close(fig)
     # End of bargraph
-
+    """
     #stock check
     latestDateInven = Inventory.query.order_by(desc(Inventory.date)).first().date
     latestInventoryEntry = Inventory.query.filter_by(date=latestDateInven).all()
@@ -134,7 +139,8 @@ def home():
                            datesMenuUsedNoEntries=dates_with_no_entries_menu_item,
                            latestSalesDateWords=latestSalesDateWords, dailySalesDate=formattedDistinctDates,
                            dailyUsed=dailyUsed,
-                           graph=graph)
+                           #graph=graph,
+                           earliest_date=earliest_date,latest_date=latest_date)
 
 
 
@@ -357,6 +363,22 @@ def ingredients():
             db.session.commit()
             flash('Ingredient removed list', category='success')
             return redirect(url_for('views.ingredients'))
+        if request.form['action'] == 'updateMinimumStock':
+            ingredient_name = request.form.get('ingredientName')
+            new_min_stock = request.form.get('minimumStockEdit', type=int)
+            
+            if new_min_stock is None or new_min_stock == '':
+                flash('Please input minimum stock quantity', category='error')
+                return redirect(url_for('views.ingredients'))
+            else:
+                ingredient_to_update = Ingredients.query.filter_by(ingredientName=ingredient_name).first()
+                if ingredient_to_update:
+                    ingredient_to_update.minimumStock = new_min_stock
+                    db.session.commit()
+                    flash('Minimum stock updated successfully', category='success')
+                else:
+                    flash('Ingredient not found', category='error')
+                return redirect(url_for('views.ingredients'))
     return render_template("ingredients.html",user=current_user, allIngredients=allIngredients,dateToday=formattedDate)
    
 
@@ -532,6 +554,14 @@ def dailyusage():
     allRecipe = Recipe.query.all()
     distinctRecipe = db.session.query(Recipe.recipeName).distinct().all()
     allUsedMenu = dailyUsedMenuItem.query.all()
+
+    # Get min and max dates from the database
+    min_date_result = db.session.query(db.func.min(dailyUsedMenuItem.date)).scalar()
+    max_date_result = db.session.query(db.func.max(dailyUsedMenuItem.date)).scalar()
+
+    # Convert to date objects (if results exist)
+    minDate = min_date_result.date() if min_date_result else datetime.now().date()
+    maxDate = max_date_result.date() if max_date_result else datetime.now().date()
 
     if request.method == 'POST':
         if request.form['action'] == 'addAll':
@@ -710,7 +740,8 @@ def dailyusage():
                                 dailyList=distinctRecipe)  
               
     return render_template("dailyusage.html",user=current_user, dateToday=formattedDate,
-                           allRecipe=allRecipe,distinctRecipe=distinctRecipe)
+                           allRecipe=allRecipe,distinctRecipe=distinctRecipe,
+                           minDate=minDate, maxDate=maxDate)
 
 @views.route('/recipecreate', methods=['GET','POST'])
 @login_required
@@ -775,6 +806,30 @@ def recipecreate():
                 flash('Recipe added', category='success')
             
             return redirect(url_for('views.recipecreate'))
+        if request.form['action'] == 'recipeEdit':
+            recipe_name = request.form.get('recipeName')
+            ingredient_name = request.form.get('ingredientName')
+            new_quantity = request.form.get('ingredientsQuantityEdit',type=int)
+            new_uom = request.form.get('ingredientsUOMEdit')
+            
+            if new_quantity is None or new_quantity == '':
+                flash('Please input quantity', category='error')
+                return redirect(url_for('views.recipecreate'))
+            else:
+                recipe_to_update = Recipe.query.filter_by(recipeName=recipe_name).first()
+                if recipe_to_update:
+                    
+                    recipe_to_update.ingredients = ingredient_name
+                    recipe_to_update.quantity = new_quantity
+                    recipe_to_update.unitOfMeasure = new_uom
+                    
+                    
+                    db.session.commit()
+                    
+                    flash('Recipe Ingredient Edit Success', category='success')
+                else:
+                    flash('Recipe not found', category='error')
+                return redirect(url_for('views.recipecreate'))
         if request.form['action'] == 'removeAll':
             db.session.query(TempIngredients).delete()
             db.session.commit()
@@ -941,6 +996,79 @@ def get_grocery_list():
         for r in results
     ]
     return jsonify(grocery_list)
+
+@views.route('/graph_data', methods=['GET'])
+def graph_data():
+    dt_from = request.args.get('dtFrom')
+    dt_to = request.args.get('dtTo')
+
+    if dt_from:
+        dt_from = datetime.strptime(dt_from, "%Y-%m-%d").date()
+    if dt_to:
+        dt_to = datetime.strptime(dt_to, "%Y-%m-%d").date()
+
+    query = db.session.query(
+        dailyUsedMenuItem.recipeItem,
+        func.sum(dailyUsedMenuItem.quantity).label('total_quantity')
+    )
+
+    if dt_from and dt_to:
+        query = query.filter(dailyUsedMenuItem.date.between(dt_from, dt_to))
+        title = f"Total Quantity per Recipe from {dt_from.strftime('%b %d, %Y')} to {dt_to.strftime('%b %d, %Y')}"
+    elif dt_from:
+        query = query.filter(dailyUsedMenuItem.date == dt_from)
+        title = f"Total Quantity per Recipe on {dt_from.strftime('%b %d, %Y')}"
+    else:
+        latest_date = db.session.query(func.max(dailyUsedMenuItem.date)).scalar()
+        query = query.filter(dailyUsedMenuItem.date == latest_date)
+        title = f"Total Quantity per Recipe on {latest_date.strftime('%b-%d-%Y')}"
+
+    query = query.group_by(dailyUsedMenuItem.recipeItem)
+    results = query.all()
+
+    # Build DataFrame
+    #df = pd.DataFrame(results, columns=["recipeItem", "total_quantity"])
+    df = pd.DataFrame([{"recipeItem": row[0], "total_quantity": row[1]} for row in results])
+    df['recipeItem'] = df['recipeItem'].astype(str)
+    df['total_quantity'] = df['total_quantity'].astype(float)
+    df.reset_index(drop=True, inplace=True)
+
+    # Convert query results to lists
+    recipe_items = [str(row[0]) for row in results]
+    quantities = [float(row[1]) for row in results]
+
+    graph_data = {
+        "data": [
+            {
+                "type": "bar",
+                "x": recipe_items,  # Recipe names as strings
+                "y": quantities,    # Quantities as numbers
+                "text": quantities, # Text to display on bars
+                "textposition": "outside",
+                "textfont": {"size": 12},
+                "textangle": 0,
+                "cliponaxis": False,
+                "marker": {"color": "#636efa"}
+            }
+        ],
+        "layout": {
+            "title": "",
+            "xaxis": {"title": "Recipe Item"},
+            "yaxis": {"title": "Total Quantity"},
+            "barmode": "group",
+            "height": 500,
+            "width": 800,
+            "margin": {"t": 50, "b": 100}
+        }
+    }
+    # Also return table data
+    table_data = [{"recipeItem": row[0], "total_quantity": row[1]} for row in results]
+
+    return Response(json.dumps({
+    "graph": graph_data,
+    "table": table_data,
+    "title": title
+}), mimetype='application/json')
 
 @views.route('/export')
 def export():

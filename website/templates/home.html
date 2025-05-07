@@ -97,6 +97,49 @@
                         <!--start daily sales-->
                         <div class="card overflow-auto">
                             <h5 class="card-header">
+                                Daily Sales
+                            </h5>
+                            <div class="card-body">
+                                <h6 class="card-title" id="graphTitle"> From Sales date: </h6>
+                                <br>
+                                <form id="dateFilterForm"> <!--method="POST"-->
+                                    <!-- Start of row for side-by-side input fields -->
+                                    <div class="row">
+                                        <!-- First input (From Date) -->
+                                        <div class="col-md-6">
+                                            <label for="dtFrom">From Date:</label>
+                                            <input type="date" id="dtFrom" name="dtFrom" class="form-control" onchange="SetMinDate(this); updateForecastDays();" style="text-align:center;" min="{{ earliest_date }}" max="{{ latest_date }}">
+                                        </div>
+                                        <!-- Second input (To Date) -->
+                                        <div class="col-md-6">
+                                            <label for="dtTo">To Date:</label>
+                                            <input type="date" id="dtTo" name="dtTo" class="form-control" onchange="SetMaxDate(this); updateForecastDays();" style="text-align:center;" max="{{ latest_date }}">
+                                        </div>
+                                    </div>
+                                    <br>
+                                    <button type="submit" id="submitDate" class="btn btn-secondary">Submit</button>
+                                    
+                                </form>
+                                <div><!-- Table for Chart Data -->
+                                    <div id="plotlyChart" style="margin-top: 30px;"></div>
+                                    
+                                    <table class="table table-bordered mt-4 table-striped datatable" id="dataTable">
+                                    <thead>
+                                        <tr>
+                                        <th>Menu Item</th>
+                                        <th>Total Quantity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                    </table>
+                                </div>
+                                <div id="barGraph">
+
+                                </div>
+                            </div>
+                        </div>
+                        <!--<div class="card overflow-auto">
+                            <h5 class="card-header">
                                 Daily Ordered Items
                             </h5>
                             <div class="card-body">
@@ -132,7 +175,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
+                        </div><br>
                         <div class="card">
                             <h5 class="card-header">
                                 Graph
@@ -143,10 +186,10 @@
                                 
                             </div>
                         </div>
-                    </div>
+                    </div>-->
                     <!--end daily sales-->  
                 </div>
-
+                </div>
             </div><!--End of Left Side-->
             <div class="col-lg-4"><!--Start right side-->
                 <div class="card"> <!--Menu ordered Breakdown-->
@@ -235,6 +278,137 @@
 </section>
 
 
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    // Load data on page load
+window.addEventListener("DOMContentLoaded", () => {
+  // Make sure the form exists
+  const form = document.getElementById('dateFilterForm');
+  if (form) {
+    console.log("Form found, attaching event listener");
+    // Attach submit event listener directly to the form
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      console.log("Form submitted");
+      
+      const dtFrom = document.getElementById('dtFrom').value;
+      const dtTo = document.getElementById('dtTo').value;
+      
+      console.log("Date values:", dtFrom, dtTo);
+      
+      // Validate
+      if (!dtFrom) {
+        alert('Please select a "From Date".');
+        return;
+      }
+      
+      // Load chart with user-defined dates
+      loadChartData(dtFrom, dtTo);
+    });
+  } else {
+    console.error("Form not found! Check if the ID 'dateFilterForm' is correct.");
+  }
+  
+  // Load initial data
+  loadChartData();
+});
 
+function loadChartData(dtFrom = '', dtTo = '') {
+  console.log("Loading chart data with dates:", dtFrom, dtTo);
+  
+  const params = new URLSearchParams();
+  if (dtFrom) params.append("dtFrom", dtFrom);
+  if (dtTo) params.append("dtTo", dtTo);
+  
+  // Show loading indicator if you have one
+  // document.getElementById('loadingIndicator').style.display = 'block';
+  
+  fetch('/graph_data?' + params.toString())
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! Status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => {
+      console.log("Data received:", data);
+      
+      // Title
+      const titleElement = document.getElementById('graphTitle');
+      if (titleElement) {
+        titleElement.textContent = data.title;
+      }
+      
+      // Plotly chart
+      Plotly.newPlot("plotlyChart", data.graph.data, data.graph.layout);
+      
+      // Populate table
+      let dataTableInstance;
+      if ($.fn.dataTable.isDataTable('#dataTable')) {
+        dataTableInstance = $('#dataTable').DataTable();
+        dataTableInstance.destroy(); // Destroy the existing instance
+      }
+      
+      const tbody = document.querySelector('#dataTable tbody');
+      tbody.innerHTML = ""; // clear old data
+      
+      data.table.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${row.recipeItem}</td><td>${row.total_quantity}</td>`;
+        tbody.appendChild(tr);
+      });
+      
+      // Reinitialize DataTable
+      $('#dataTable').DataTable({
+        "paging": true,
+        "ordering": true,
+        "searching": true,
+        "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
+      });
+      
+      // Hide loading indicator if you have one
+      // document.getElementById('loadingIndicator').style.display = 'none';
+    })
+    .catch(err => {
+      console.error('Error loading chart data:', err);
+      alert("Failed to load data: " + err.message);
+      
+      // Hide loading indicator if you have one
+      // document.getElementById('loadingIndicator').style.display = 'none';
+    });
+}
+
+    function SetMinDate(fromInput) {
+    const dtFrom = new Date(fromInput.value);
+    if (isNaN(dtFrom)) return;
+
+    // Set min for To Date = From Date + 1 day
+    const toInput = document.getElementById('dtTo');
+    const minToDate = new Date(dtFrom);
+    minToDate.setDate(minToDate.getDate() + 1);
+    toInput.min = minToDate.toISOString().split('T')[0];
+
+    // Optional: clear toDate if it’s now invalid
+    if (toInput.value && new Date(toInput.value) < minToDate) {
+      toInput.value = '';
+    }
+  }
+
+  function SetMaxDate(toInput) {
+    const dtTo = new Date(toInput.value);
+    if (isNaN(dtTo)) return;
+
+    // Set max for From Date = To Date - 1 day
+    const fromInput = document.getElementById('dtFrom');
+    const maxFromDate = new Date(dtTo);
+    maxFromDate.setDate(maxFromDate.getDate() - 1);
+    fromInput.max = maxFromDate.toISOString().split('T')[0];
+
+    // Optional: clear fromDate if it’s now invalid
+    if (fromInput.value && new Date(fromInput.value) > maxFromDate) {
+      fromInput.value = '';
+    }
+  }
+  </script>
 
 {% endblock %}
