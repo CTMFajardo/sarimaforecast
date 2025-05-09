@@ -3,8 +3,7 @@
 
 {% block content %} 
 <br><br><br><br>
-<h3>Daily Summary </h3>
-<br>
+
 
 <section class="section dashboard">
     <div class="container-fluid">
@@ -27,6 +26,7 @@
                                         <tr>
                                             <th scope="col">Ingredient name</th>
                                             <th scope="col">Quantity</th>
+                                            <th scope="col">Unit of Measure</th>
                                             <th scope="col">Status</th>
                                         </tr>
                                     </thead>
@@ -38,15 +38,22 @@
                                                         <tr>
                                                             <td>{{ stockEntry.inventoryItem }}</td>
                                                             <td>{{ stockEntry.quantity }}</td>
-                                                            {% if stockEntry.quantity >= ingredient.minimumStock * 0.6 and stockEntry.quantity < ingredient.minimumStock %}
-                                                            <td><span class="badge badge-pill badge-warning">Warning</span></td>
-                                                            {% elif stockEntry.quantity < ingredient.minimumStock * 0.6 %}
-                                                            <td><span class="badge badge-pill badge-danger">Danger</span></td>
-                                                            {% elif stockEntry.quantity == 0 %}
-                                                            <td><span class="badge badge-pill badge-dark">Out of Stock</span></td>
-                                                            {% else %}
-                                                            <td><span class="badge badge-pill badge-success">Good</span></td>
-                                                            {% endif %}
+                                                            <td>{{ uomMap.get(stockEntry.inventoryItem, "N/A") }}</td>
+                                                            <td>
+                                                                <div class="progress">
+                                                                    {% set progress_percent = ((stockEntry.quantity / ingredient.minimumStock * 100)|round(0, 'floor')|int if ingredient.minimumStock > 0 else 0) %}
+                                                                    <div class="progress-bar dynamic-stock-progress" 
+                                                                        role="progressbar" 
+                                                                        style="width: {{ progress_percent }}%" 
+                                                                        aria-valuenow="{{ progress_percent }}" 
+                                                                        aria-valuemin="0" 
+                                                                        aria-valuemax="100"
+                                                                        data-quantity="{{ stockEntry.quantity }}"
+                                                                        data-minimum="{{ ingredient.minimumStock }}">
+                                                                        {{ progress_percent }}%
+                                                                    </div>
+                                                                </div>
+                                                            </td>
                                                         </tr>  
                                                     {% endif %}                                                                                    
                                                 {% endif %}
@@ -192,7 +199,7 @@
                 </div>
             </div><!--End of Left Side-->
             <div class="col-lg-4"><!--Start right side-->
-                <div class="card"> <!--Menu ordered Breakdown-->
+                <!--<div class="card"> 
                     <h5 class="card-header">Placeholder Graph</h5>
                     <div class="card-body">
                         <form method="POST">
@@ -209,8 +216,8 @@
                         </div>
                         
                     </div>
-                </div>
-                <br>
+                </div>-->
+                
                 <div class="card"> <!--Inventory Logs-->
                     <h5 class="card-header">Empty Inventory Dates</h5>
                     <div class="card-body">
@@ -311,6 +318,25 @@ window.addEventListener("DOMContentLoaded", () => {
   
   // Load initial data
   loadChartData();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const progressBars = document.querySelectorAll('.dynamic-stock-progress');
+    
+    progressBars.forEach(bar => {
+        const progress = parseFloat(bar.style.width);
+        bar.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-dark');
+        
+        if (progress === 0) {
+            bar.classList.add('bg-dark');
+        } else if (progress < 30) {
+            bar.classList.add('bg-danger');
+        } else if (progress < 60) {
+            bar.classList.add('bg-warning');
+        } else {
+            bar.classList.add('bg-success');
+        }
+    });
 });
 
 function loadChartData(dtFrom = '', dtTo = '') {

@@ -41,6 +41,16 @@
                   />                 
                 </td>
               </tr>
+              <tr>
+                <td><b>Unit of Measure: </b></td>
+                <td>
+                  <input
+                    type="text"        
+                    id="unitOfMeasure"
+                    name="unitOfMeasure"
+                    placeholder="UoM"/>
+                </td>
+              </tr>
             </tbody>
           </table>
           <br>      
@@ -83,6 +93,7 @@
             <tr>
               <th>Ingredient</th>
               <th>Minimum Stock</th>
+              <th>Unit of Measure</th>
             </tr>
           </thead>
           <tbody>
@@ -96,6 +107,7 @@
                 </a>
               </td>
               <td>{{ allIngredients.minimumStock }}</td>
+              <td>{{ allIngredients.unitOfMeasure }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -139,6 +151,7 @@
                          oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null">
                 </td>
               </tr>
+              
             </tbody>
           </table>
           

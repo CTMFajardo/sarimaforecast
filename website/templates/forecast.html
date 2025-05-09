@@ -39,13 +39,15 @@
                         <input type="hidden" id="minusCurrentDate" name="minusCurrentDate">
                         
                         <button type="submit" id="forecastBtn" class="btn btn-secondary"  name="action" value="forecast" disabled>Forecast</button>
+                        <input type="checkbox" id="calibration" name="calibration" value="calibration">
+                        <label for="calibration"> Calibrate model</label><br>
                     </div>
                 </form>
             </div>
         </div>
         <div>
             <br>
-            <div class="card"><!--forecast details-->>
+            <div class="card"><!--forecast details-->
                 <div class="card-header" id="forecastRangeHeader">
                     <h3>Forecasted Quantity from {{ dt_from }} to {{ dt_to }}</h3>
                     <input type="hidden" id="dtFromHidden" value="{{ dt_from_raw }}">
@@ -80,6 +82,7 @@
                 <div class="card-body">
                     <button type="submit" id="groceryBtn" class="btn btn-secondary"  name="action" value="grocery">Generate Grocery List</button>
                     <br>
+                    <br>
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped datatable" id="groceryListTable">
                             <thead>
@@ -105,8 +108,21 @@
                 Day of Last Data Entry
             </div>
             <div class="card-body">
-                <!-- Dynamic date shown here -->
                 <p>{{ dailyUsed.lastEntryToWords }}</p>
+            </div>
+        </div>
+        <br>
+        <div class="card">
+            <div class="card-header">
+                Day of Last Calibration
+            </div>
+            <div class="card-body">
+
+                {% if calibrateCheck %}
+                <p>{{ calibrateCheck.strftime('%B %d, %Y') }}</p>
+                {% else %}
+                <p>No Calibration done</p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -248,45 +264,7 @@
     setInterval(toggleForecastBtn, 500);
     });
     
-    //document.addEventListener('DOMContentLoaded', function () {
-    //const forecastBtn = document.getElementById('forecastBtn');
-
-    //forecastBtn.addEventListener('click', function (event) {
-        //event.preventDefault(); // Prevent form submission if it's inside a form
-        //fetchForecastTable();
-    //});
-    //});
-
-    // Function to fetch the forecast table and update the table
-    /*document.addEventListener('DOMContentLoaded', function () {
-    const recipeLinks = document.querySelectorAll('.recipe-link');
-
-    recipeLinks.forEach(link => {
-        link.addEventListener('click', function (e) {
-            e.preventDefault();
-            const recipeName = this.dataset.recipe;
-
-            fetch(`/get_forecast_details/${encodeURIComponent(recipeName)}`)
-                .then(response => response.json())
-                .then(data => {
-                    const tbody = document.querySelector('#forecastDetailsTable tbody');
-                    tbody.innerHTML = '';
-
-                    data.forEach(row => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${row.date}</td><td>${Math.round(row.forecast)}</td>`;
-                        tbody.appendChild(tr);
-                    });
-
-                    document.querySelector('#forecastModalLabel').textContent = `Forecast Details: ${recipeName}`;
-                    new bootstrap.Modal(document.getElementById('forecastModal')).show();
-                })
-                .catch(err => {
-                    console.error('Error fetching forecast details:', err);
-                });
-        });
-    });
-    }); */
+    
 
     document.addEventListener('DOMContentLoaded', function () {
     const recipeLinks = document.querySelectorAll('.recipe-link');
@@ -328,8 +306,23 @@
             });
         });
 
-    document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function () {
     const groceryBtn = document.getElementById('groceryBtn');
+    let groceryTable = $('#groceryListTable').DataTable({
+        paging: true,
+        searching: true,
+        ordering: true,
+        responsive: true,
+        columns: [
+            { title: "Ingredient Name" },
+            { title: "Total Forecasted Quantity" },
+            { title: "Unit of Measure" }
+        ],
+        data: [], // Start with empty data
+        language: {
+            emptyTable: "Generate grocery list to view ingredients"
+        }
+    });
 
     // Enable groceryBtn only if forecastTable has rows
     const forecastTableRows = document.querySelectorAll('#forecastTable tbody tr');
@@ -344,27 +337,35 @@
         const dtTo = document.getElementById('dtToHidden').value;
 
         fetch(`/get_grocery_list?dt_from=${dtFrom}&dt_to=${dtTo}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
             .then(data => {
-                const tbody = document.querySelector('#groceryListTable tbody');
-                tbody.innerHTML = ''; // Clear previous results
-
-                data.forEach(row => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${row.ingredient}</td>
-                        <td>${Math.round(row.total)}</td>
-                        <td>${row.unit}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+                // Clear existing data
+                groceryTable.clear();
                 
+                if (data && data.length > 0) {
+                    // Prepare data in correct format for DataTables
+                    const tableData = data.map(row => [
+                        row.ingredient,
+                        Math.round(row.total),
+                        row.unit
+                    ]);
+                    
+                    // Add new data
+                    groceryTable.rows.add(tableData).draw();
+                }
             })
             .catch(error => {
                 console.error('Error loading grocery list:', error);
+                groceryTable.clear().draw();
+                $('#groceryListTable tbody').html(
+                    '<tr><td colspan="3" class="text-center text-danger">Error loading grocery list</td></tr>'
+                );
             });
-        });
     });
+});
 
     window.onload = function() {
     setTodayMinDate();  // Set min dates for From and To inputs

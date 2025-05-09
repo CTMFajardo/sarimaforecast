@@ -16,7 +16,8 @@ class User(db.Model, UserMixin):
 class Ingredients(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ingredientName = db.Column(db.String(10000), unique=True)
-    minimumStock = db.Column(db.Integer)  
+    minimumStock = db.Column(db.Integer)
+    unitOfMeasure = db.Column(db.Text)
     
 class Recipe(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)

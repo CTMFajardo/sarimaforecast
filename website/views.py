@@ -15,7 +15,7 @@ import json
 
 #my sarima codes
 #from .sarima_util import train_sarima_for_all_items, make_predictions_for_all_items, get_file_modification_date, create_notepad_with_date, file_path, load_all_sarima_models
-from .sarimaauto import forecastAllRecipes, checkForecastDates
+from .sarimaauto import forecastAllRecipes, checkForecastDates, forecastAllRecipesnotAuto, getLastCalibrationDate
 
 from .misc_util import dateToWords, get_dates_with_no_entries, upload_excel_to_db, export_db_to_excel
 
@@ -128,7 +128,9 @@ def home():
     # For dailyUsedMenuItem
     dates_with_no_entries_menu_item = get_dates_with_no_entries(dailyUsedMenuItem, db.session)
 
-
+    ingredients = Ingredients.query.all()
+    uomMap = {ing.ingredientName: ing.unitOfMeasure for ing in ingredients}
+    parStockMap = {ing.ingredientName: ing.minimumStock for ing in ingredients} 
 
     return render_template("home.html",user=current_user, dateToday=formattedDate,
                            stockCheck=allBelowMinimum, stockDate=stockDate,
@@ -138,7 +140,7 @@ def home():
                            dateInvenNoEntries=dates_with_no_entries_inventory,
                            datesMenuUsedNoEntries=dates_with_no_entries_menu_item,
                            latestSalesDateWords=latestSalesDateWords, dailySalesDate=formattedDistinctDates,
-                           dailyUsed=dailyUsed,
+                           dailyUsed=dailyUsed, uomMap=uomMap, parStockMap=parStockMap,
                            #graph=graph,
                            earliest_date=earliest_date,latest_date=latest_date)
 
@@ -148,7 +150,7 @@ def home():
 @login_required
 def inventory():
     allIngredients = Ingredients.query.order_by(Ingredients.ingredientName).all()
-
+    dates_with_no_entries_inventory = get_dates_with_no_entries(Inventory, db.session)
 
     if request.method == 'POST':
         if request.form['action'] == 'addAll':
@@ -191,6 +193,10 @@ def inventory():
     
         if request.form['action'] == 'checkInventory':
             date = request.form.get('checkInventory')
+            
+            if not date:
+                flash('No inventory on that date', category='error')
+
             dateCheck = Inventory.query.filter(Inventory.date == 
                                                 date).first()
             date_obj = datetime.strptime(date, "%Y-%m-%d").date()
@@ -199,7 +205,7 @@ def inventory():
             
 
 
-            if date == "":
+            if not date:
                 flash('No inventory on that date', category='error')
             if date_obj > dateToday:
                 flash('Date selected cannot be in the future',category='error')
@@ -213,6 +219,10 @@ def inventory():
                     filteredDate = Inventory.query.filter_by(date=date).order_by(Inventory.inventoryItem).all()
                     filteredDate2 = Inventory.query.filter_by(date=previousDate).all()
                     postedBy = filteredDate[0].postedBy
+
+                    ingredients = Ingredients.query.all()
+                    uomMap = {ing.ingredientName: ing.unitOfMeasure for ing in ingredients}
+                    parStockMap = {ing.ingredientName: ing.minimumStock for ing in ingredients}
 
                     hasEditDate = Inventory.query.filter_by(date=selectedDate).filter(Inventory.editDate.isnot(None)).first()
                     editDate= False
@@ -231,7 +241,8 @@ def inventory():
                                     previousDate=previousDate,
                                     postedBy=postedBy, editDate=editDate,
                                     editedBy=editedBy,editAuth=editAuth,
-                                    minIngredients=allIngredients,selectDate=date)            
+                                    minIngredients=allIngredients,selectDate=date,
+                                    uomMap=uomMap,parStockMap=parStockMap,dateInvenNoEntries=dates_with_no_entries_inventory)            
                 else:
                     selectedDate = datetime.strptime(date, '%Y-%m-%d').date()
                     previousDate = selectedDate - timedelta(days=1)
@@ -243,7 +254,7 @@ def inventory():
 
                     return render_template("inventory.html", user=current_user, dateToday=formattedDate,
                                     dailyList=allIngredients, date=chosenDate,
-                                    prevInv=filteredDate2)
+                                    prevInv=filteredDate2, dateInvenNoEntries=dates_with_no_entries_inventory)
                 
         if request.form['action'] == 'authSupervisor':
             user_name = request.form.get('authName')
@@ -270,7 +281,7 @@ def inventory():
                                                authBy=authBy, editCurrentDate=date_obj,
                                                 dateWords=selectedDateWords, filteredDate=filteredDate,
                                                selectDate=selectDate,
-                                               user=current_user)
+                                               user=current_user,dateInvenNoEntries=dates_with_no_entries_inventory)
                     else:
                         flash('Incorrect password',category='error')
             else:
@@ -324,8 +335,8 @@ def inventory():
             #selectedDate = datetime.strptime(date, '%Y-%m-%d').date()
 
             return render_template("inventory.html", user=current_user, dateToday=formattedDate,
-                                   dailyList=allIngredients,date=date)
-    return render_template("inventory.html", user=current_user)
+                                   dailyList=allIngredients,date=date, dateInvenNoEntries=dates_with_no_entries_inventory)
+    return render_template("inventory.html", user=current_user, dateInvenNoEntries=dates_with_no_entries_inventory)
 
 @views.route('/ingredients',methods=['GET', 'POST'])
 @login_required
@@ -338,21 +349,26 @@ def ingredients():
         flash('You are not authorized to access this page.', category='error')
         return redirect(url_for('views.home'))
     
-    allIngredients = Ingredients.query.order_by(Ingredients.ingredientName).all()
+    allIngredients = Ingredients.query.all()
     
     
     if request.method == 'POST':
         if request.form['action'] == 'add':
             ingredientName = request.form.get('ingredientName')
             minimumStock = request.form.get('minimumStock')
+            unitOfMeasure = request.form.get('unitOfMeasure')   
+
             nameCheck = Ingredients.query.filter(func.lower(Ingredients.ingredientName) == 
                                                  func.lower(ingredientName)).first()
             if nameCheck:
                 flash('Ingredient already exists',category='error')
             elif len(ingredientName) < 2:
                 flash('Name is too short', category='error')
+            elif unitOfMeasure is None or unitOfMeasure == '':
+                flash('Please input unit of measure', category='error')
             else:
-                new_ingredient = Ingredients(ingredientName=ingredientName,minimumStock=minimumStock)
+                new_ingredient = Ingredients(ingredientName=ingredientName,minimumStock=minimumStock,
+                                             unitOfMeasure=unitOfMeasure)
                 db.session.add(new_ingredient)
                 db.session.commit()
                 flash('Ingredient added to list', category='success')
@@ -366,6 +382,7 @@ def ingredients():
         if request.form['action'] == 'updateMinimumStock':
             ingredient_name = request.form.get('ingredientName')
             new_min_stock = request.form.get('minimumStockEdit', type=int)
+
             
             if new_min_stock is None or new_min_stock == '':
                 flash('Please input minimum stock quantity', category='error')
@@ -386,92 +403,10 @@ def ingredients():
 @login_required
 def forecast():
 
-    """""
-    modDate = get_file_modification_date(file_path)
-    models = {}
-
-    if request.method == 'POST':
-        if request.form['action'] == 'trainModel':
-            models = train_sarima_for_all_items()
-            flash('Forecast Model Trained', category='success')
-            return render_template("forecast.html",user=current_user,dateToday=formattedDate,
-                                   modDate=modDate,models=models
-                                   )
-        if request.form['action'] == 'loadModel':
-            models = load_all_sarima_models()
-            flash('Forecast Model Loaded', category='success')
-            return render_template("forecast.html",user=current_user,dateToday=formattedDate,
-                                   modDate=modDate,models=models)
-        if request.form['action'] == 'forecast':
-            steps = request.form.get('minimumDays')
-            steps = int(steps)
-            models = load_all_sarima_models()
-
-            if not steps:
-                flash('Please provide a valid number for days.', category='error')
-                return render_template("forecast.html", user=current_user, dateToday=formattedDate, modDate=modDate)
-            else:
-                if models:
-                    make_predictions_for_all_items(models, steps)
-                    # Retrieve the latest forecast entry by ordering the dates in descending order
-                    latest_forecast = ForecastedValues.query.order_by(ForecastedValues.date.desc()).first()
-
-                    # If there is a latest forecast, get the date
-                    if latest_forecast:
-                        latest_date = latest_forecast.date.strftime('%b %d, %Y')  # Format the date as "Month Day, Year"
-                    else:
-                        latest_date = None
-
-                    
-                    # Render the template with forecasted values and the latest date
-                    return render_template("forecast.html", user=current_user, dateToday=formattedDate,
-                                        modDate=modDate, models=models, predictions=formatted_forecasts,
-                                        latest_date=latest_date)  
-                else:
-                    flash('No models found, please train or load models first.', category='error')
-                    return render_template("forecast.html", user=current_user, dateToday=formattedDate,
-                                        modDate=modDate, models=models)
-        if request.form['action'] == 'showData' :
-            # Retrieve the latest forecast entry by ordering the dates in descending order
-            latest_forecast = ForecastedValues.query.order_by(ForecastedValues.date.desc()).first()
-
-            # If there is a latest forecast, get the date
-            if latest_forecast:
-                latest_date = latest_forecast.date.strftime('%b %d, %Y')  # Format the date as "Month Day, Year"
-            else:
-                latest_date = None
-
-            # If you want to load forecasted values from the database
-            forecasted_values = ForecastedValues.query.filter(ForecastedValues.date == latest_forecast.date).all()  # Get all forecasted values from the DB
-
-            # Format the forecasted data
-            formatted_forecasts = [
-                {
-                    "recipe_item": forecast.recipeItem,
-                    "date": forecast.date.strftime('%b %d, %Y'),  # Format date as "Month Day, Year"
-                    "forecasted_quantity": forecast.forecasted_quantity,
-                    "mean_se": forecast.mean_se,
-                    "ci_lower": forecast.ci_lower,
-                    "ci_upper": forecast.ci_upper,
-                }
-                for forecast in forecasted_values
-            ]
-            
-            # Calculate totals for the forecasted values
-            total_forecasted_quantity = sum(f['forecasted_quantity'] for f in formatted_forecasts)
-            total_ci_lower = sum(f['ci_lower'] for f in formatted_forecasts)
-            total_ci_upper = sum(f['ci_upper'] for f in formatted_forecasts)
-
-            # Render the template with forecasted values and the latest date
-            return render_template("forecast.html", user=current_user, dateToday=formattedDate,
-                                modDate=modDate, models=models, predictions=formatted_forecasts,
-                                total_forecasted_quantity=total_forecasted_quantity,
-                                total_ci_lower=total_ci_lower, total_ci_upper=total_ci_upper,
-                                latest_date=latest_date)  # Pass the latest date to the template
-    """
     lastEntry = db.session.query(dailyUsedMenuItem).order_by(dailyUsedMenuItem.date.desc()).first()
     lastEntryToWords = lastEntry.date.strftime("%B %d, %Y")
-
+    calibrateCheck = getLastCalibrationDate()
+    
     if lastEntry:
         lastEntryDate = lastEntry.date
 
@@ -482,8 +417,11 @@ def forecast():
         if request.form['action'] == 'forecast':
 
             
+
             dtFrom = request.form.get('dtFrom')
             dtTo = request.form.get('dtTo')
+            calibrate = request.form.get('calibration')
+
             dateFrom = datetime.strptime(dtFrom, "%Y-%m-%d").date()
             dateTo = datetime.strptime(dtTo, "%Y-%m-%d").date()
             
@@ -492,15 +430,26 @@ def forecast():
             
             checkRequestedDates = checkForecastDates(dateFrom, dateTo)
 
+            if calibrate:
+                with current_app.app_context():
+                    #compute steps
+                    forecastDaysInput = int(request.form.get('forecastDaysInput'))
+                    daysAdvance = int(request.form.get('minusCurrentDate'))
+                    totalSteps = daysDifference + forecastDaysInput + daysAdvance
+                    forecastAllRecipes(totalSteps)
             if not checkRequestedDates:
                 #compute steps
                 forecastDaysInput = int(request.form.get('forecastDaysInput'))
                 daysAdvance = int(request.form.get('minusCurrentDate'))
                 totalSteps = daysDifference + forecastDaysInput + daysAdvance
 
-                with current_app.app_context():
-                    forecastAllRecipes(totalSteps)
-                    
+                if calibrate or calibrateCheck is None:
+                    with current_app.app_context():
+                        forecastAllRecipes(totalSteps)
+                else:
+                    with current_app.app_context():
+                        forecastAllRecipesnotAuto(totalSteps)
+                   
             latestEntryForecasted = db.session.query(ForecastedValues).order_by(ForecastedValues.dateToday.desc()).first()
 
             # Filter only forecasted values that fall in the selected date range
@@ -531,7 +480,8 @@ def forecast():
                 'dt_from': dateFromFormatted,
                 'dt_to': dateToFormatted,
                 'dt_from_raw': dateFrom,
-                'dt_to_raw': dateTo
+                'dt_to_raw': dateTo,
+                'calibrateCheck': calibrateCheck
 
             }
 
@@ -543,7 +493,8 @@ def forecast():
         'dailyUsed' : {
             'lastEntry' : lastEntry,
             'lastEntryToWords' : lastEntryToWords
-        }
+        },
+        'calibrateCheck': calibrateCheck
     }
     return render_template("forecast.html",user=current_user,dateToday=formattedDate, 
                            **context)
@@ -555,13 +506,15 @@ def dailyusage():
     distinctRecipe = db.session.query(Recipe.recipeName).distinct().all()
     allUsedMenu = dailyUsedMenuItem.query.all()
 
+    dates_with_no_entries_menu_item = get_dates_with_no_entries(dailyUsedMenuItem, db.session)
+    
     # Get min and max dates from the database
-    min_date_result = db.session.query(db.func.min(dailyUsedMenuItem.date)).scalar()
-    max_date_result = db.session.query(db.func.max(dailyUsedMenuItem.date)).scalar()
+    UsedMenuCheck = dailyUsedMenuItem.query.first()
 
-    # Convert to date objects (if results exist)
-    minDate = min_date_result.date() if min_date_result else datetime.now().date()
-    maxDate = max_date_result.date() if max_date_result else datetime.now().date()
+    if UsedMenuCheck:
+        minDate = db.session.query(db.func.min(dailyUsedMenuItem.date)).scalar()
+        maxDate = db.session.query(db.func.max(dailyUsedMenuItem.date)).scalar()
+
 
     if request.method == 'POST':
         if request.form['action'] == 'addAll':
@@ -609,10 +562,14 @@ def dailyusage():
     
         if request.form['action'] == 'checkOrdered':
             date = request.form.get('checkOrdered')
+
+            if not date:
+                flash('No inventory on that date', category='error')
+
             date_obj = datetime.strptime(date, "%Y-%m-%d").date()
             chosenDate = date_obj.strftime("%B %d, %Y")
 
-            if date == "":
+            if not date:
                 flash('No data on that date', category='error')
             elif date_obj > dateToday:
                 flash('Date selected cannot be in the future',category='error')
@@ -642,14 +599,15 @@ def dailyusage():
                                     checkInv=filteredDate, editedBy=editedBy,
                                     date=date_obj, dateWords=chosenDate,
                                     editDate=editDate, editAuth=editAuth,
-                                    postedBy=postedBy)            
+                                    postedBy=postedBy,
+                                    datesMenuUsedNoEntries=dates_with_no_entries_menu_item)            
                 else:
                     
                     distinctRecipe = db.session.query(Recipe.recipeName).distinct().all()
                            
                     return render_template("dailyusage.html", user=current_user, dateToday=formattedDate,
                                     dailyList=distinctRecipe, date=chosenDate,
-                                    allRecipe=allRecipe
+                                    allRecipe=allRecipe,datesMenuUsedNoEntries=dates_with_no_entries_menu_item
                                     )        
         if request.form['action'] == 'authSupervisor1':
             user_name = request.form.get('authName')
@@ -671,7 +629,8 @@ def dailyusage():
                         return render_template("dailyusage.html",editFilteredDate=editFilteredDate,
                                                authBy=authBy, editCurrentDate=selectedDate,
                                                selectedDateWords=selectedDateWords,
-                                               user=current_user,dateToday=formattedDate,)
+                                               user=current_user,dateToday=formattedDate,
+                                               datesMenuUsedNoEntries=dates_with_no_entries_menu_item)
                     else:
                         flash('Incorrect password',category='error')
             else:
@@ -715,7 +674,8 @@ def dailyusage():
             if date_objTo > dateToday:
                 flash('Date selected cannot be in the future',category='error')
             return render_template("dailyusage.html", user=current_user, dateToday=formattedDate,
-                                toDate=toDateWords,fromDate=fromDateWords)
+                                toDate=toDateWords,fromDate=fromDateWords,
+                                datesMenuUsedNoEntries=dates_with_no_entries_menu_item)
         
         ##############
         ###TEST#######
@@ -741,7 +701,7 @@ def dailyusage():
               
     return render_template("dailyusage.html",user=current_user, dateToday=formattedDate,
                            allRecipe=allRecipe,distinctRecipe=distinctRecipe,
-                           minDate=minDate, maxDate=maxDate)
+                           minDate=minDate, maxDate=maxDate,datesMenuUsedNoEntries=dates_with_no_entries_menu_item)
 
 @views.route('/recipecreate', methods=['GET','POST'])
 @login_required
@@ -811,15 +771,17 @@ def recipecreate():
             ingredient_name = request.form.get('ingredientName')
             new_quantity = request.form.get('ingredientsQuantityEdit',type=int)
             new_uom = request.form.get('ingredientsUOMEdit')
+            print("All form data:", request.form)
+            print("Hidden ingredient value:", request.form.get('ingredientName'))
             
             if new_quantity is None or new_quantity == '':
                 flash('Please input quantity', category='error')
                 return redirect(url_for('views.recipecreate'))
             else:
-                recipe_to_update = Recipe.query.filter_by(recipeName=recipe_name).first()
+                recipe_to_update = Recipe.query.filter_by(recipeName=recipe_name,ingredients=ingredient_name).first()
                 if recipe_to_update:
                     
-                    recipe_to_update.ingredients = ingredient_name
+                    
                     recipe_to_update.quantity = new_quantity
                     recipe_to_update.unitOfMeasure = new_uom
                     
@@ -913,25 +875,6 @@ def editaccount():
 
     return render_template("editaccount.html",user=current_user,dateToday=formattedDate)
 
-
-#@views.route('/get_forecast_details/<recipe_name>')
-#def get_forecast_details(recipe_name):
-    latest_entry = db.session.query(ForecastedValues.dateToday).order_by(ForecastedValues.dateToday.desc()).first()
-    if not latest_entry:
-        return jsonify({'error': 'No forecast data found'}), 404
-
-    latest_date_today = latest_entry.dateToday
-
-    forecast_data = db.session.query(
-        ForecastedValues.date,
-        ForecastedValues.forecasted_quantity
-    ).filter(
-        ForecastedValues.recipeItem == recipe_name,
-        ForecastedValues.dateToday == latest_date_today
-    ).order_by(ForecastedValues.date).all()
-
-    result = [{'date': f.date.strftime('%Y-%m-%d'), 'forecast': float(f.forecasted_quantity)} for f in forecast_data]
-    return jsonify(result)
 
 @views.route('/get_forecast_details/<recipe_name>')
 def get_forecast_details(recipe_name):
@@ -1069,6 +1012,90 @@ def graph_data():
     "table": table_data,
     "title": title
 }), mimetype='application/json')
+
+@views.route('/recipe_usage_graph', methods=['GET'])
+def recipe_usage_graph():
+    try:
+        # Validate and parse dates
+        from_date = request.args.get('fromDate')
+        to_date = request.args.get('toDate')
+        
+        if not from_date or not to_date:
+            return jsonify({'error': 'Both fromDate and toDate parameters are required'}), 400
+
+        from_date = datetime.strptime(from_date, "%Y-%m-%d").date()
+        to_date = datetime.strptime(to_date, "%Y-%m-%d").date()
+        
+        if from_date > to_date:
+            return jsonify({'error': 'fromDate cannot be after toDate'}), 400
+
+        # Query database with error handling
+        try:
+            results = db.session.query(
+                dailyUsedMenuItem.date,
+                dailyUsedMenuItem.recipeItem,
+                func.sum(dailyUsedMenuItem.quantity).label('total_quantity')
+            ).filter(
+                dailyUsedMenuItem.date.between(from_date, to_date)
+            ).group_by(
+                dailyUsedMenuItem.date, 
+                dailyUsedMenuItem.recipeItem
+            ).order_by(
+                dailyUsedMenuItem.date
+            ).all()
+        except Exception as e:
+            return jsonify({'error': f'Database error: {str(e)}'}), 500
+
+        # Process results
+        if not results:
+            return jsonify({'error': 'No data found for selected date range'}), 404
+
+        # Prepare data structure
+        plot_data = {}
+        all_dates = set()
+        
+        for date, recipe_item, quantity in results:
+            date_str = date.strftime('%Y-%m-%d')
+            #all_dates.add(date_str)
+            
+            if recipe_item not in plot_data:
+                plot_data[recipe_item] = {
+                    'x': [],
+                    'y': [],
+                    'name': recipe_item,
+                    'mode': 'lines+markers',
+                    'type': 'scatter'
+                }
+            
+            plot_data[recipe_item]['x'].append(date_str)
+            plot_data[recipe_item]['y'].append(float(quantity))
+
+        # Convert to list and sort dates
+        all_dates = sorted(all_dates)
+        traces = list(plot_data.values())
+
+        # Create responsive layout
+        layout = {
+            'title': f' ',
+            'xaxis': {'title': 'Date', 'type': 'date'},
+            'yaxis': {'title': 'Quantity Used'},
+            'hovermode': 'closest',
+            'margin': {'l': 50, 'r': 50, 't': 60, 'b': 50},
+            'autosize': True,
+            'legend': {'orientation': 'h', 'y': -0.2}
+        }
+
+        return jsonify({
+            'data': traces,
+            'layout': layout,
+            'dates': all_dates,
+            'recipeItems': list(plot_data.keys())
+        })
+
+    except ValueError as e:
+        return jsonify({'error': f'Invalid date format: {str(e)}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 @views.route('/export')
 def export():

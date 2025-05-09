@@ -6,77 +6,78 @@
 <br>
 <br>
 
-      
-
 <div class="row">
-  
-  <div class="col-md-8"> <!--Pull date-->
-    <div class="card">
-      <div class="card-header">
-        <h2>Check Inventory</h2>
-      </div>
-      <div class="card-body">
-        <form method="POST">
-          <label for="checkInventory">Check Inventory:</label>
-          <input type="date" id="checkInventory" name="checkInventory">
-          <button type="submit" class="btn btn-secondary" name="action" value="checkInventory">Check Inventory</button>
-          <br><br>
-        </form>
+  <div class="col-md-8"><!--Start left-->
+    <!-- Check Inventory Section -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h2>Check Inventory</h2>
+        </div>
+        <div class="card-body">
+          <form method="POST">
+            <label for="checkInventory">Check Inventory:</label>
+            <input type="date" id="checkInventory" name="checkInventory" required>
+            <button type="submit" class="btn btn-secondary" name="action" value="checkInventory">Check Inventory</button>
+            <br><br>
+          </form>
+        </div>
       </div>
     </div>
-  </div>
 
-  <br>
-  <div class="col-md-8">
     <br>
-    <div><!--This is when inventory is available-->
+    
+    <!-- Display Inventory Section -->
+    <div>
       {% if checkInv %}
       <div class="card">
         <div class="card-header">
           <h3>Inventory for {{ dateWords }}</h3>
         </div>
         <div class="card-body">
-          <table class="table table-borderless datatable">
-              <thead>
-                  <tr>
-                      <th>Name</th>
-                      <th>Beginning Quantity</th>
-                      <th>Ending Quantity</th>
-                      <th>Produced</th>
-                      <th>Status</th>
-                  </tr>
-              </thead>
-              <tbody>
-                  {% for allInventory in checkInv %}
-                  <tr>
-                      <td>{{ allInventory.inventoryItem }}</td>
-                      <td>
-                          {% for prevData in prevInv %}
-                          {% if prevData.inventoryItem == allInventory.inventoryItem %}
-                          {{ prevData.quantity }}
-                          {% endif %}
-                          {% endfor %}
-                      </td>
-                      <td>{{ allInventory.quantity }}</td>
-                      <td>{{ allInventory.stockAdd }}</td>
-                      <td>
-                        {% for minIngredients in minIngredients %}
-                        {% if allInventory.inventoryItem == minIngredients.ingredientName %}
-                          {% if allInventory.quantity >= minIngredients.minimumStock * 0.6 and allInventory.quantity < minIngredients.minimumStock %}
-                            <span class="badge badge-pill badge-warning">Warning</span>
-                          {% elif allInventory.quantity < minIngredients.minimumStock * 0.6 %}
-                            <span class="badge badge-pill badge-danger">Danger</span>
-                          {% elif allInventory.quantity == 0 %}
-                            <span class="badge badge-pill badge-dark">Out of Stock</span>
-                          {% else %}
-                            <span class="badge badge-pill badge-success">Good</span>
-                          {% endif %}
-                        {% endif %}
-                        {% endfor %}
-                      </td>
-                  </tr>
+          <table class="table table-borderless table-striped datatable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Beginning Quantity</th>
+                <th>Ending Quantity</th>
+                <th>Produced</th>
+                <th>Unit of Measure</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for allInventory in checkInv %}
+              <tr>
+                <td>{{ allInventory.inventoryItem }}</td>
+                <td>
+                  {% for prevData in prevInv %}
+                  {% if prevData.inventoryItem == allInventory.inventoryItem %}
+                  {{ prevData.quantity }}
+                  {% endif %}
                   {% endfor %}
-              </tbody>
+                </td>
+                <td>{{ allInventory.quantity }}</td>
+                <td>{{ allInventory.stockAdd }}</td>
+                <td>{{ uomMap.get(allInventory.inventoryItem, "N/A") }}</td>
+                <td>
+                  <div class="progress">
+                    {% set progress_percent = ((allInventory.quantity / parStockMap[allInventory.inventoryItem] * 100)|round(0)|int if parStockMap[allInventory.inventoryItem] > 0 else 0) %}
+                    <div class="progress-bar dynamic-stock-progress" 
+                        role="progressbar" 
+                        style="width: {{ progress_percent }}%" 
+                        aria-valuenow="{{ progress_percent }}" 
+                        aria-valuemin="0" 
+                        aria-valuemax="100"
+                        data-quantity="{{ allInventory.quantity }}"
+                        data-minimum="{{ parStockMap[allInventory.inventoryItem] }}">
+                        {{ progress_percent }}%
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
           </table>
           <br>
           <p>Posted by: {{ postedBy }}</p>
@@ -93,38 +94,10 @@
           <p>*This requires Supervisor authorization</p>
           <br>
           <br>
-        </div> <!--End card body inventory-->
-        <div class="card-footer">
-          <table class="table-borderless">
-            <thead>
-                <tr>
-                    <th>Status</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><span class="badge badge-pill badge-success">Good</span></td>
-                    <td>Above minimum stock</td>
-                </tr>
-                <tr>
-                    <td><span class="badge badge-pill badge-warning">Warning</span></td>
-                    <td>60%-100% of stock</td>
-                </tr>
-                <tr>
-                    <td><span class="badge badge-pill badge-danger">Danger</span></td>
-                    <td>1%-60% of stock</td>
-                </tr>
-                <tr>
-                    <td><span class="badge badge-pill badge-dark">Out of Stock</span></td>
-                    <td>Out of stock</td>
-                </tr>
-            </tbody>
-          </table>
         </div>
-      </div><!--End Card-->
-
-      <!-- Modal -->
+      </div>
+      
+      <!-- Authorization Modal -->
       <div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
@@ -139,30 +112,29 @@
                 <div class="form-group">
                   <table>
                     <tbody>                          
-                        <tr>
-                          <td><b>Username: </b></td>  
-                          <td>      
-                            <input
-                              type="text"        
-                              id="authName"
-                              name="authName"
-                              placeholder="Enter Username"/>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td><b>Password: </b></td>
-                          <td>
-                            <input
-                            type="password"     
-                            id="authPass"
-                            name="authPass"
-                            placeholder="Supervisor Password"
-                            />
-                            <input type="hidden" id="currentDate" name="currentDate" value="{{ date }}"> 
-                            <input type="hidden" id="selectDate" name="selectDate" value="{{ selectDate }}">        
-                          </td>
-                            
-                        </tr>
+                      <tr>
+                        <td><b>Username: </b></td>  
+                        <td>      
+                          <input
+                            type="text"        
+                            id="authName"
+                            name="authName"
+                            placeholder="Enter Username"/>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><b>Password: </b></td>
+                        <td>
+                          <input
+                          type="password"     
+                          id="authPass"
+                          name="authPass"
+                          placeholder="Supervisor Password"
+                          />
+                          <input type="hidden" id="currentDate" name="currentDate" value="{{ date }}"> 
+                          <input type="hidden" id="selectDate" name="selectDate" value="{{ selectDate }}">        
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                   <br>      
@@ -170,106 +142,137 @@
                     <button type="submit" class="btn btn-secondary" name="action" value="authSupervisor">Authorize</button>
                   </div>
                 </div> 
+              </form>
             </div>
           </div>
         </div>
       </div>
       {% endif %}
     </div>
-  </div>
-  <div class="col-md-8">
-  <!--When inputting new inventory-->
-  <br>
-    <form method="POST"  onsubmit="return confirm('Are you sure you want to submit?');">            
-      {% if dailyList %}
-      <div class="card">
-        <div class="card-header">
-          <h3>Input Daily Inventory for {{ date }}</h3>
-        </div>
-        <div class="card-body">
-          <table>
+    
+    <!-- Input New Inventory Section -->
+    <div>
+      <br>
+      <form method="POST" onsubmit="return confirm('Are you sure you want to submit?');">            
+        {% if dailyList %}
+        <div class="card">
+          <div class="card-header">
+            <h3>Input Daily Inventory for {{ date }}</h3>
+          </div>
+          <div class="card-body">
+            <table>
               <tbody>
-                  <th>Name</th>
-                  <th>Input Ending Quantity</th>
-                  <th>Produced Today</th>
-                  
-                  </tr>
-                  {% for dailyList in dailyList %}
-                      <tr>  
-                          <td>{{ dailyList.ingredientName }}</td>
-                          <td>
-                              <input type="number" id="{{ dailyList.ingredientName }}" name="{{ dailyList.ingredientName }}" 
-                                  placeholder="Quantity" size="1" min="0" oninput="this.value = 
-                                  !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"/>
-                              <input type="hidden" id="currentDate" name="currentDate" value="{{ date }}">
-                          </td>
-                          <td>
-                              <input type="number" id="add{{ dailyList.ingredientName }}" name="add{{ dailyList.ingredientName }}" 
-                                  placeholder="Quantity" size="1" min="0" oninput="this.value = 
-                                  !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"/>
-                          </td>
-                      </tr>
-                  {% endfor %}
+                <th>Name</th>
+                <th>Input Ending Quantity</th>
+                <th>Produced Today</th>
+                </tr>
+                {% for dailyList in dailyList %}
+                <tr>  
+                  <td>{{ dailyList.ingredientName }}</td>
+                  <td>
+                    <input type="number" id="{{ dailyList.ingredientName }}" name="{{ dailyList.ingredientName }}" 
+                      placeholder="Quantity" size="1" min="0" oninput="this.value = 
+                      !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"/>
+                    <input type="hidden" id="currentDate" name="currentDate" value="{{ date }}">
+                  </td>
+                  <td>
+                    <input type="number" id="add{{ dailyList.ingredientName }}" name="add{{ dailyList.ingredientName }}" 
+                      placeholder="Quantity" size="1" min="0" oninput="this.value = 
+                      !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"/>
+                  </td>
+                </tr>
+                {% endfor %}
               </tbody>
-          </table>
-          <p>Note: 'Ending Quantity' can not be empty. 'Produced Today' can be empty</p>
-          <br>
-          <button type="submit" class="btn btn-secondary" name="action" value="addAll">Save Daily Inventory</button>
-          {% endif %}
+            </table>
+            <p>Note: 'Ending Quantity' can not be empty. 'Produced Today' can be empty</p>
+            <br>
+            <button type="submit" class="btn btn-secondary" name="action" value="addAll">Save Daily Inventory</button>
+          </div>
         </div>
-    </form>
-  </div>
-  <div class="col-md-8">
-  <!--Edit Inventory-->
-  <br>
-    <form method="POST"  onsubmit="return confirm('Are you sure you want to submit?');">
-      {% if editCurrentDate %}
-      <div class="card">
-        <div class="card-header">
-          <h3>Edit Daily Inventory for {{ dateWords }}</h3>
-        </div>
-        <div class="card-body">
-
-          <table class="table">
-            <thead class="thead-dark">
+        {% endif %}
+      </form>
+    </div>
+    
+    <!-- Edit Inventory Section -->
+    <div>
+      <br>
+      <form method="POST" onsubmit="return confirm('Are you sure you want to submit?');">
+        {% if editCurrentDate %}
+        <div class="card">
+          <div class="card-header">
+            <h3>Edit Daily Inventory for {{ dateWords }}</h3>
+          </div>
+          <div class="card-body">
+            <table class="table">
+              <thead class="thead-dark">
                 <tr>   
                   <th>Name</th>
                   <th>Old Quantity</th>
                   <th class="text-center">to </th>
                   <th>New Quantity</th>
-                </thead>    
                 </tr>
-                <tbody>
-                  {% for allStock in filteredDate %}
-                    <tr>  
-                        <td>{{ allStock.inventoryItem }}
-                          <input type="hidden" id="itemToEdit" name="itemToEdit" value="{{ allStock.inventoryItem }}">
-                        </td>
-                        <td>{{ allStock.quantity }}</td>
-                        <td class="text-center"><p>></p></td>
-                        <td>
-                          <input type="number" id="add{{ allStock.inventoryItem }}" name="add{{ allStock.inventoryItem }}" 
-                          placeholder="New Quantity" size="1" min="0" oninput="this.value = 
-                          !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"/>
-                          </td>
-                    </tr>
-                  {% endfor %}
-                  
-                </tbody>
-                
-          </table>
-          <p>Note: New quantity must not be empty</p>
-          <input type="hidden" id="dateToEdit" name="dateToEdit" value="{{ editCurrentDate }}">
-          <input type="hidden" id="selectDate" value=" {{ selectDate }}">
-          <input type="hidden" id="authUser" name="authUser" value="{{ authBy }}">
-          <br> <button type="submit" class="btn btn-secondary" name="action" value="editInventory">Submit</button>  
+              </thead>    
+              <tbody>
+                {% for allStock in filteredDate %}
+                <tr>  
+                  <td>{{ allStock.inventoryItem }}
+                    <input type="hidden" id="itemToEdit" name="itemToEdit" value="{{ allStock.inventoryItem }}">
+                  </td>
+                  <td>{{ allStock.quantity }}</td>
+                  <td class="text-center"><p>></p></td>
+                  <td>
+                    <input type="number" id="add{{ allStock.inventoryItem }}" name="add{{ allStock.inventoryItem }}" 
+                    placeholder="New Quantity" size="1" min="0" oninput="this.value = 
+                    !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"/>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <p>Note: New quantity must not be empty</p>
+            <input type="hidden" id="dateToEdit" name="dateToEdit" value="{{ editCurrentDate }}">
+            <input type="hidden" id="selectDate" value=" {{ selectDate }}">
+            <input type="hidden" id="authUser" name="authUser" value="{{ authBy }}">
+            <br> 
+            <button type="submit" class="btn btn-secondary" name="action" value="editInventory">Submit</button>  
+          </div>
         </div>
-      {% endif %}
+        {% endif %}
+      </form>
+    </div>
+  </div><!--End left-->
 
-    </form>
-  </div>
+  <div class="col-md-4"><!--Start right-->
+    <div class="card"> <!--Inventory Logs-->
+      <h5 class="card-header">Empty Inventory Dates</h5>
+      <div class="card-body">
+        {% if dateInvenNoEntries %}
+        <div>
+          <table class="table table-borderless datatable">                   
+            <thead>
+              <tr>
+                <th scope="col">Inventory Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for date in dateInvenNoEntries %}
+              <tr>
+                <td><a href="{{ url_for('views.inventory', date=date) }}">{{ date }}</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <img src="https://hotidioms.files.wordpress.com/2018/01/green-thumb.png?w=242&h=242" alt="Green Thumb Image">
+        <p>Inventory is updated!</p>
+        {% endif %}
+        <br>                        
+        <p>*Note: If there is a date in the database that is not updated, it will appear here*</p>
+      </div>
+    </div>
+  </div><!--End right-->
 </div>
-    
 
 <br> 
 <!--
@@ -278,4 +281,25 @@
 <br>
 
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      const progressBars = document.querySelectorAll('.dynamic-stock-progress');
+      
+      progressBars.forEach(bar => {
+          const progress = parseFloat(bar.style.width);
+          bar.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-dark');
+          
+          if (progress === 0) {
+              bar.classList.add('bg-dark');
+          } else if (progress < 30) {
+              bar.classList.add('bg-danger');
+          } else if (progress < 60) {
+              bar.classList.add('bg-warning');
+          } else {
+              bar.classList.add('bg-success');
+          }
+      });
+  });
+  </script>
 {% endblock %}
