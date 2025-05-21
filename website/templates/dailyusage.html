@@ -272,29 +272,26 @@
 <br><br>
 <br><br>
 
-
+{% if user.position == "admin" %}
 <div>
   <form method="POST"> <!--FOR TESTING ONLY!!-->
     <div class="card"> <!--For database import export-->
-      <h5 class="card-header">TESTING PURPOSES, DELETE AFTER</h5>
+      <h5 class="card-header">TESTING PURPOSES</h5>
       <div class="card-body">
-        <button type="submit" class="btn btn-secondary" name="action" value="importCSV">Import</button>
-        <br><br>
-        <button type="submit" class="btn btn-secondary" name="action" value="exportCSV">Export</button>
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('views.handle_file_action') }}">
+              <input type="file" name="file"> <!-- File input for uploading -->
+              <br><br>
+              <button type="submit" class="btn btn-secondary" name="action" value="importCSV">Import</button>
+              <br><br>
+              <button type="submit" class="btn btn-secondary" name="action" value="exportCSV">Export</button>
+        </form>
       </div>
     </div>
   </form>
 </div>
+{% endif %}
 <br> 
-<form method="POST" enctype="multipart/form-data" action="{{ url_for('views.handle_file_action') }}">
-  <div class="card-body">
-      <input type="file" name="file"> <!-- File input for uploading -->
-      <br><br>
-      <button type="submit" class="btn btn-secondary" name="action" value="importCSV">Import</button>
-      <br><br>
-      <button type="submit" class="btn btn-secondary" name="action" value="exportCSV">Export</button>
-  </div>
-</form>
+
 <!--
 <button type="submit" class="btn btn-secondary" name="action" value="deleteAll">Delete Daily Inventory</button>
 -->

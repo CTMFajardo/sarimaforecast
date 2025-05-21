@@ -72,7 +72,11 @@ def get_dates_with_no_entries(model, session):
     return sorted_dates_with_no_entries
 
 # Function to export the database to an Excel file
-#def export_db_to_excel(file_path):
+def export_db_to_excel(file_path):
+
+    import os
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
     records = dailyUsedMenuItem.query.all()
     data = []
     for record in records:
@@ -89,7 +93,8 @@ def get_dates_with_no_entries(model, session):
         })
     df = pd.DataFrame(data)
     df.to_excel(file_path, index=False)
-
+    return file_path
+'''
 def export_db_to_excel(file_path):
     records = ForecastedValues.query.all()  # Query all records from the ForecastedValues model
     data = []
@@ -106,7 +111,7 @@ def export_db_to_excel(file_path):
         })
     df = pd.DataFrame(data)
     df.to_excel(file_path, index=False)
-
+'''
 # Function to upload Excel to the database
 def upload_excel_to_db(file_path):
     df = pd.read_excel(file_path)

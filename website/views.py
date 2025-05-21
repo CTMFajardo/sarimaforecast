@@ -5,30 +5,26 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from . import db
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
+"""
 from dateutil.relativedelta import relativedelta
 import plotly.graph_objs as go
 import plotly.io as pio
 import plotly.express as px
 from plotly.utils import PlotlyJSONEncoder
+import matplotlib.pyplot as plt
+from io import BytesIO
+import base64
+"""
 import json
 
 
 #my sarima codes
-#from .sarima_util import train_sarima_for_all_items, make_predictions_for_all_items, get_file_modification_date, create_notepad_with_date, file_path, load_all_sarima_models
 from .sarimaauto import forecastAllRecipes, checkForecastDates, forecastAllRecipesnotAuto, getLastCalibrationDate
 
 from .misc_util import dateToWords, get_dates_with_no_entries, upload_excel_to_db, export_db_to_excel
 
 
-#dont use streamlit
-
-#import streamlit as st
-import matplotlib
-matplotlib.use('Agg')
 import pandas as pd
-import matplotlib.pyplot as plt
-from io import BytesIO
-import base64
 
 #for export import
 import os
@@ -80,33 +76,7 @@ def home():
         latestDateOrdered = dailyUsedMenuItem.query.order_by(desc(dailyUsedMenuItem.date)).first().date
         latestOrderedEntries = dailyUsedMenuItem.query.filter_by(date=latestDateOrdered).all()
         latestSalesDateWords = latestDateOrdered.strftime("%B %d, %Y")
-    """
-    #generate bargraph
-    dailyItems = [item.recipeItem for item in latestOrderedEntries]
-    quantities = [item.quantity for item in latestOrderedEntries]
-
-    # Create Matplotlib bar graph with smaller size
-    fig, ax = plt.subplots(figsize=(8, 6))  # Adjust figure size as needed
-    ax.bar(dailyItems, quantities, color='#3498db', alpha=0.8)  # Set bar color and opacity
-    ax.set_xlabel('Recipe Item', fontsize=12)  # Customize x-axis label and font size
-    ax.set_ylabel('Quantity', fontsize=12)  # Customize y-axis label and font size
-    ax.set_title(f'Daily Used Menu Items - {latestSalesDateWords}', fontsize=14)  # Set title and font size
-    ax.tick_params(axis='x', rotation=45)  # Rotate x-axis labels if necessary
-    fig.tight_layout()
-
-    # Save plot to a BytesIO object
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-    plot_data = base64.b64encode(buffer.getvalue()).decode()
-
-    # Embed plot in HTML
-    graph = f'<img src="data:image/png;base64,{plot_data}" alt="Daily Used Menu Items Graph" class="img-fluid">'
-    
-    # Close the plot to release resources
-    plt.close(fig)
-    # End of bargraph
-    """
+  
     #stock check
     latestDateInven = Inventory.query.order_by(desc(Inventory.date)).first().date
     latestInventoryEntry = Inventory.query.filter_by(date=latestDateInven).all()
@@ -1101,6 +1071,9 @@ def recipe_usage_graph():
 def export():
     file_path = os.path.join(current_app.config['EXPORT_FOLDER'], 'exported_data.xlsx')
     export_db_to_excel(file_path)
+    print(f"Full export path: {os.path.abspath(file_path)}")
+    print(f"File exists: {os.path.exists(file_path)}")
+    print(f"Directory contents: {os.listdir(os.path.dirname(file_path))}")
     return send_file(file_path, as_attachment=True)
 
     # Route to upload an Excel file
@@ -1149,10 +1122,19 @@ def handle_file_action():
 
         # Handle the export action
         elif request.form['action'] == 'exportCSV':
+            
             file_path = os.path.join(current_app.config['EXPORT_FOLDER'], 'exported_data.xlsx')
-            export_db_to_excel(file_path)
-            flash('Export Success', category='success')
-            return send_file(file_path, as_attachment=True)
+            try:
+                export_db_to_excel(file_path)
+                if os.path.exists(file_path):
+                    flash('Export Success', category='success')
+                    return send_file(file_path, as_attachment=True)
+                else:
+                    flash('Export file was not created', category='error')
+            except Exception as e:
+                flash(f'Export failed: {str(e)}', category='error')
+            
+            return redirect(url_for('views.dailyusage'))
 
     # Render a template with the buttons if it's a GET request
     return redirect(url_for("views.dailyusage"))  # Replace with your actual template name

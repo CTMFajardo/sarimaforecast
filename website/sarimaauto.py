@@ -1,6 +1,4 @@
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from pmdarima import auto_arima
 from .models import Recipe, dailyUsedMenuItem, ForecastedValues
 from sqlalchemy import func, and_
