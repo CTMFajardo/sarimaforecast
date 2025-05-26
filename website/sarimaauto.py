@@ -72,8 +72,15 @@ def get_sarima_orders(recipe_name: str) -> dict:
     safe_name = "".join(c if c.isalnum() else "_" for c in recipe_name)
     filepath = Path(f"sarima_models/{safe_name}.pkl")
     
+    #if not filepath.exists():
+        #raise FileNotFoundError(f"No saved model for '{recipe_name}'")
+
+    # If exact file doesn't exist, try loading any .pkl file in the folder
     if not filepath.exists():
-        raise FileNotFoundError(f"No saved model for '{recipe_name}'")
+        pkl_files = list(Path("sarima_models").glob("*.pkl"))
+        if not pkl_files:
+            raise FileNotFoundError(f"No .pkl files found in 'sarima_models/'")
+        filepath = pkl_files[0] 
     
     with open(filepath, 'rb') as f:
         data = pickle.load(f)
