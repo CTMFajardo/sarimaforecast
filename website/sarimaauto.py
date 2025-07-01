@@ -76,11 +76,27 @@ def get_sarima_orders(recipe_name: str) -> dict:
         #raise FileNotFoundError(f"No saved model for '{recipe_name}'")
 
     # If exact file doesn't exist, try loading any .pkl file in the folder
+    #if not filepath.exists():
+    #    pkl_files = list(Path("sarima_models").glob("*.pkl"))
+    #    if not pkl_files:
+    #        raise FileNotFoundError(f"No .pkl files found in 'sarima_models/'")
+    #    filepath = pkl_files[0] 
+    
+    GENERIC_MODEL = {
+        'order': (1, 0, 1),           # p=1, d=0, q=1 (no negatives)
+        'seasonal_order': (0, 0, 0, 7), # No seasonal terms
+        'timestamp': datetime.now().date(),
+        'aic': float('inf')
+    }
+
     if not filepath.exists():
-        pkl_files = list(Path("sarima_models").glob("*.pkl"))
-        if not pkl_files:
-            raise FileNotFoundError(f"No .pkl files found in 'sarima_models/'")
-        filepath = pkl_files[0] 
+        print(f"No model found for '{recipe_name}', using generic safe parameters")
+        return {
+            'order': GENERIC_MODEL['order'],
+            'seasonal_order': GENERIC_MODEL['seasonal_order'],
+            'last_saved': GENERIC_MODEL['timestamp'],
+            'aic': GENERIC_MODEL['aic']
+        }
     
     with open(filepath, 'rb') as f:
         data = pickle.load(f)
@@ -107,6 +123,9 @@ def getData(recipe_name: str):
     # Convert to DataFrame
     df = pd.DataFrame(results, columns=['date', 'quantity'])
 
+    print(f"\nRecipe: '{recipe_name}'")
+    print(f"Total days found: {len(df)}")
+    
     return df
 
 def forecastAutoSarima(data: pd.DataFrame, date_col: str, value_col: str, steps: int, seasonal_period: int = 12):
@@ -272,8 +291,11 @@ def forecastSarima(
             enforce_stationarity=False,
             enforce_invertibility=False
         ).fit(disp=False)
+
+        forecast = model.forecast(steps=steps)
+        forecast = forecast.clip(lower=0) 
     
-    return model.forecast(steps=steps), model
+    return forecast, model
 
 def forecastAllRecipesnotAuto(steps: int = 7):
     """
@@ -314,7 +336,7 @@ def forecastAllRecipesnotAuto(steps: int = 7):
                     dateToday=latest_date
                 ).first():
                     
-                    conf_int = model.get_forecast(steps).conf_int().iloc[i]
+                    conf_int = model.get_forecast(steps).conf_int().iloc[i].clip(lower=0)
                     db.session.add(ForecastedValues(
                         recipeItem=recipe_name,
                         date=date.date(),
