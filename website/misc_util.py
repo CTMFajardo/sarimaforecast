@@ -113,7 +113,7 @@ def export_db_to_excel(file_path):
     df.to_excel(file_path, index=False)
 '''
 # Function to upload Excel to the database
-def upload_excel_to_db(file_path):
+def test_upload_excel_to_db(file_path):
     df = pd.read_excel(file_path)
     
     # Log the first few rows to inspect the data
@@ -156,3 +156,76 @@ def upload_excel_to_db(file_path):
             logging.error(f"Error adding record: {e}")
             db.session.rollback()
 
+def upload_excel_to_db(file_path):
+    # First delete all existing records
+    try:
+        num_deleted = db.session.query(dailyUsedMenuItem).delete()
+        db.session.commit()
+        logging.debug(f"Deleted {num_deleted} existing records")
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error deleting existing records: {e}")
+        raise
+
+    # Now process and import the new records
+    df = pd.read_excel(file_path)
+    
+    # Log the first few rows to inspect the data
+    logging.debug(f"DataFrame head:\n{df.head()}")
+    
+    # Handle missing columns gracefully
+    expected_columns = {
+        'recipeItem': None,
+        'quantity': None,
+        'date': None,
+        'user_id': None,
+        'postedBy': None,
+        'editedBy': None,
+        'editDate': None,
+        'authBy': None
+    }
+    
+    # Check which columns exist in the DataFrame
+    for col in expected_columns:
+        if col in df.columns:
+            # Replace NaN/NaT with None for existing columns
+            if df[col].dtype == 'datetime64[ns]':
+                df[col] = df[col].replace({pd.NaT: None})
+            else:
+                df[col] = df[col].replace({np.nan: None})
+        else:
+            logging.warning(f"Column '{col}' not found in Excel file, using None as default")
+    
+    # Log the cleaned data
+    logging.debug(f"Cleaned DataFrame head:\n{df.head()}")
+    
+    records = []
+    for _, row in df.iterrows():
+        # Safely get each field with default None if column doesn't exist
+        date = pd.to_datetime(row['date']).date() if 'date' in row and row['date'] is not None else None
+        edit_date = pd.to_datetime(row['editDate']).date() if 'editDate' in row and row['editDate'] is not None else None
+        
+        # Create new record
+        record = dailyUsedMenuItem(
+            recipeItem=row.get('recipeItem'),
+            quantity=row.get('quantity'),
+            date=date,
+            user_id=row.get('user_id'),
+            postedBy=row.get('postedBy'),
+            editedBy=row.get('editedBy'),
+            editDate=edit_date,
+            authBy=row.get('authBy')
+        )
+        records.append(record)
+        logging.debug(f"Prepared new record: {row.get('recipeItem')} on {date}")
+
+    # Bulk insert all new records
+    try:
+        db.session.bulk_save_objects(records)
+        db.session.commit()
+        logging.debug(f"Successfully imported {len(records)} new records")
+        return True
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error importing records: {e}")
+        raise
