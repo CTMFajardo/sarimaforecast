@@ -35,12 +35,13 @@ def get_dates_with_no_entries(model, session):
     date_range = [first_date_entry + timedelta(days=i) for i in range((current_date - first_date_entry).days + 1)]
 
     # Query the dates that have entries in the model table
-    dates_with_entries = session.query(model.date).distinct().all()
+    dates_with_entries = session.query(model.date).distinct().order_by(model.date).all()
     dates_with_entries = [date[0] for date in dates_with_entries]
 
     # Find the dates with no entries
     dates_with_no_entries = [date.strftime("%B %d, %Y") for date in date_range if date not in dates_with_entries]
-
+    dates_with_no_entries.sort()
+    
     return dates_with_no_entries
 
 #def get_dates_with_no_entries(model, session):
