@@ -1107,7 +1107,7 @@ def upload():
 @views.route('/handle_file_action', methods=['GET', 'POST'])
 def handle_file_action():
     if request.method == 'POST':
-        # Handle the import action
+        
         if request.form['action'] == 'importCSV':
             file = request.files.get('file')
             if file:
@@ -1120,7 +1120,7 @@ def handle_file_action():
                 flash('No file selected for import', category='error')
             return redirect(url_for('views.handle_file_action'))
 
-        # Handle the export action
+        
         elif request.form['action'] == 'exportCSV':
             
             file_path = os.path.join(current_app.config['EXPORT_FOLDER'], 'exported_data.xlsx')
@@ -1136,5 +1136,30 @@ def handle_file_action():
             
             return redirect(url_for('views.dailyusage'))
 
-    # Render a template with the buttons if it's a GET request
-    return redirect(url_for("views.dailyusage"))  # Replace with your actual template name
+    
+    return redirect(url_for("views.dailyusage")) 
+
+
+"""@views.route('/get_daily_sales')
+def get_daily_sales():
+    menu_item = request.args.get('item')
+    dt_from = request.args.get('dtFrom')
+    dt_to = request.args.get('dtTo')
+
+    query = db.session.query(
+        dailyUsedMenuItem.date,
+        dailyUsedMenuItem.quantity
+    ).filter(
+        dailyUsedMenuItem.recipeItem == menu_item
+    )
+
+    if dt_from and dt_to:
+        query = query.filter(dailyUsedMenuItem.date.between(dt_from, dt_to))
+
+    results = query.order_by(dailyUsedMenuItem.date).all()
+
+    return jsonify([{
+        'date': row.date.strftime('%Y-%m-%d'),
+        'quantity': row.quantity
+    } for row in results])
+"""
