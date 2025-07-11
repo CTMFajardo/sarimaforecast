@@ -29,13 +29,13 @@
                 </td>
               </tr>
               <tr>
-                <td><b>Minimum Number of stock: </b></td>
+                <td><b>Ideal Number of stock(Par stock): </b></td>
                 <td>
                   <input
                     type="number"     
                     id="minimumStock"
                     name="minimumStock"
-                    placeholder="Minimum Stock"
+                    placeholder="Par stock"
                     min="1" 
                     oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"
                   />                 
@@ -92,7 +92,7 @@
           <thead>
             <tr>
               <th>Ingredient</th>
-              <th>Minimum Stock</th>
+              <th>Ideal Quantity(Par Stock)</th>
               <th>Unit of Measure</th>
             </tr>
           </thead>
@@ -125,7 +125,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Minimum Stock Edit</h5>
+        <h5 class="modal-title">Par Stock Edit</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
@@ -142,13 +142,13 @@
                 </td>
               </tr>
               <tr>
-                <td><b>Minimum Stock: </b></td>
+                <td><b>Ideal Level(Par Stock): </b></td>
                 <td>
                   <input type="number" class="form-control"
-                         id="minimumStockEdit" name="minimumStockEdit"
-                         placeholder="Minimum Stock"
-                         min="1" required
-                         oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null">
+                        id="minimumStockEdit" name="minimumStockEdit"
+                        placeholder="Ideal Level(Par Stock)"
+                        min="1" required
+                        oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null">
                 </td>
               </tr>
               
