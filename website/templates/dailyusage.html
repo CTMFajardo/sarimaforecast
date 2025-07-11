@@ -135,7 +135,7 @@
                 <td>{{ allRecipe.recipeName }}</td>
                 <td>
                   <input type="number" id="{{ allRecipe.recipeName }}" name="{{ allRecipe.recipeName }}" 
-                    placeholder="Quantity" size="1" min="0" oninput="this.value = 
+                    placeholder="Quantity" size="1" min="0" requried oninput="this.value = 
                     !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"/>
                   <input type="hidden" id="currentDate" name="currentDate" value="{{ date }}">
                 </td>
@@ -284,6 +284,9 @@
               <button type="submit" class="btn btn-secondary" name="action" value="importCSV">Import</button>
               <br><br>
               <button type="submit" class="btn btn-secondary" name="action" value="exportCSV">Export</button>
+              <br><br>
+              <button type="submit" class="btn btn-secondary" name="action" value="importCSVInventory">Import Inventory</button>
+              <br><br>
         </form>
       </div>
     </div>

@@ -204,7 +204,7 @@
                   <td>{{ dailyList.ingredientName }}</td>
                   <td>
                     <input type="number" id="{{ dailyList.ingredientName }}" name="{{ dailyList.ingredientName }}" 
-                      placeholder="Quantity" size="1" min="0" oninput="this.value = 
+                      placeholder="Quantity" size="1" min="0" required oninput="this.value = 
                       !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"/>
                     <input type="hidden" id="currentDate" name="currentDate" value="{{ date }}">
                   </td>
