@@ -11,6 +11,8 @@ class User(db.Model, UserMixin):
     first_name = db.Column(db.String(150))
     last_name = db.Column(db.String(150))
     position = db.Column(db.String(20))
+    secret_question = db.Column(db.String(150))
+    secret_answer = db.Column(db.String(150))
     
 
 class Ingredients(db.Model):
