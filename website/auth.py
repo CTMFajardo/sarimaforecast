@@ -30,6 +30,49 @@ def login():
                     return redirect(url_for('views.home'))
                 else:
                     flash('Incorrect password',category='error')
+        if request.form['action'] == 'forgotPass':
+            user_name = request.form.get('forgotPassUsername')
+
+            user = User.query.filter_by(user_name=user_name).first()
+            if user:
+                secret_question = user.secret_question
+                return render_template("login.html", user=current_user, user_name=user_name,
+                                       secret_question=secret_question, adminAcct=adminAcct)
+            else:
+                flash('User not found', category='error')
+        if request.form['action'] == 'secretAnswerConfirm':
+            user_name = request.form.get('forgot_user_name')
+            secret_answer = request.form.get('secret_answer')
+
+            user = User.query.filter_by(user_name=user_name).first()
+            if user:
+                if user.secret_answer == secret_answer:
+                    flash('Secret answer confirmed. You can now reset your password.', category='success')
+                    resetPassword = True
+                    return render_template("login.html", user=current_user, user_name=user_name,
+                                           resetPassword=resetPassword, adminAcct=adminAcct)
+                else:
+                    flash('Incorrect answer', category='error')
+            else:
+                flash('User not found', category='error')
+        if request.form['action'] == 'resetPassword':
+            user_name = request.form.get('reset_user_name')
+            new_password1 = request.form.get('new_password')
+            new_password2 = request.form.get('new_password2')
+
+            user = User.query.filter_by(user_name=user_name).first()
+            if user:
+                if new_password1 != new_password2:
+                    flash('Passwords do not match', category='error')
+                elif len(new_password1) < 6:
+                    flash('Password must be at least 6 characters', category='error')
+                else:
+                    user.password = generate_password_hash(new_password1, method='scrypt')
+                    db.session.commit()
+                    flash('Password reset successfully!', category='success')
+                    return redirect(url_for('auth.login'))
+            else:
+                flash('User not found', category='error')
 
         #not needed due to create_admin function in create.py            
         #if request.form['action'] == 'addAcct':
@@ -68,6 +111,8 @@ def createaccount():
             password1 = request.form.get('password1')
             password2 = request.form.get('password2')
             position = request.form.get('position')
+            secret_question = request.form.get('secret_question')
+            secret_answer = request.form.get('secret_answer')
 
             user = User.query.filter_by(user_name=user_name).first()
 
@@ -83,12 +128,16 @@ def createaccount():
                 flash('Password don\'t match', category='error')
             elif len(password1) < 6:
                 flash('Password must be at least 6 characters', category='error')
+            elif len(secret_question) < 4:
+                flash('Secret question must be at least 4 characters', category='error')
+            elif len(secret_answer) < 4:
+                flash('Secret answer must be at least 4 characters', category='error')
             elif position == '---':
                 flash('Position cannot be empty', category='error')
             else:
                 new_user = User(user_name=user_name, first_name=first_name, last_name=last_name, 
                             password=generate_password_hash(password1,method='scrypt'),
-                            position=position)
+                            position=position, secret_question=secret_question, secret_answer=secret_answer)
                 db.session.add(new_user)
                 db.session.commit()
                 #login_user(user,remember=True)

@@ -3,40 +3,165 @@
     <br><br><br><br>
     <h1></h1>
     
-    <form method="POST">
-        <h3 align="center">Login</h3>
-        <div class="form-group">
-          <label for="user_name">Username</label>
-          <input
-            type="text"
-            class="form-control"
-            id="user_name"
-            name="user_name"
-            placeholder="Enter Username"
-          />
-        </div>
-    
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input
-            type="password"
-            class="form-control"
-            id="password"
-            name="password"
-            placeholder="Enter password"
-          />
-        </div>
-        <input type="checkbox" onclick="togglePasswordVisibility('password')">Show Password
-        <br>
-        <br>
-        <button type="submit" class="btn btn-secondary"  name="action" value="login">Login</button>
-        <br>
-        <!--{% if adminAcct == False %}
-        <div>
-          <button type="submit" class="btn btn-secondary" name="action" value="addAcct">Button buton</button>
-        </div>
-        {% endif %}-->
-      </form>
+    <div class="card">
+      <div class="card-header">
+        <h2 align="center">Login</h2>
+      </div>
+      <div class="card-body">
+        <form method="POST">
+          
+          <div class="form-group">
+            <label for="user_name">Username</label>
+            <input
+              type="text"
+              class="form-control"
+              id="user_name"
+              name="user_name"
+              placeholder="Enter Username"
+            />
+          </div>
       
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              class="form-control"
+              id="password"
+              name="password"
+              placeholder="Enter password"
+            />
+          </div>
+          <input type="checkbox" onclick="togglePasswordVisibility('password')">Show Password
+          <br>
+          <br>
+          <button type="submit" class="btn btn-secondary" name="action" value="login">Login</button>
+          <br>
+          <!--{% if adminAcct == False %}
+          <div>
+            <button type="submit" class="btn btn-secondary" name="action" value="addAcct">Button buton</button>
+          </div>
+          {% endif %}-->
+        </form>
+      </div>
+      <div class="card-footer">
+          <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#forgotPassword" aria-expanded="false" aria-controls="collapseExample">
+              Forgot your password
+          </button>
+          <br><br>
+          <div class="collapse" id="forgotPassword">
+            <form method="POST">
+              <div class="form-group">
+                <label for="secret_question">Enter Username</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="forgotPassUsername"
+                  name="forgotPassUsername"
+                  placeholder="Username"
+                  required
+                  title="Username is required"
+                />
+                <br>
+                <button type="submit" class="btn btn-secondary" name="action" value="forgotPass">Check account</button>
+                <br>
+              
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <br>
+    {% if secret_question %}
+    <div class="card">
+      <div class="card-header">
+        <h2 align="center">Forgot Password</h2>
+      </div>
+      <div class="card-body">
+        <form method="POST">
+          <div class="form-group">
+            <label for="answer">Username</label>
+            <input
+              type="text"
+              class="form-control"
+              id="forgot_user_name"
+              name="forgot_user_name"
+              value="{{ user_name }}"
+              readonly
+            />
+          </div>
+          <br>
+          <p>Secret Question: {{ secret_question }}</p>
+          <br>
+          <div class="form-group">
+            <label for="secret_answer">Enter your Answer</label>
+            <input
+              type="text"
+              class="form-control"
+              id="secret_answer"
+              name="secret_answer"
+              placeholder="Answer"
+              required
+            />
+          </div>
+          <br>
+          <button type="submit" class="btn btn-secondary" name="action" value="secretAnswerConfirm">Confirm</button>
+          <br>
+        </form>
+      </div>
+    </div>
+    <br>
+    {% endif %}
+    
+    <br>
+    {% if resetPassword %}
+    <div class="card">
+      <div class="card-header">
+        <h2 align="center">Reset Password</h2>
+      </div>
+      <div class="card-body">
+        <form method="POST">
+          <div class="form-group">
+            <label for="answer">Username</label>
+            <input
+              type="text"
+              class="form-control"
+              id="reset_user_name"
+              name="reset_user_name"
+              value="{{ user_name }}"
+              readonly
+            />
+          </div>
+          <br>
+          <div class="form-group">
+            <label for="new_password">New Password</label>
+            <input
+              type="password"
+              class="form-control"
+              id="new_password"
+              name="new_password"
+              placeholder="Enter new password"
+              required
+            />
+          </div>
+          <br>
+          <div class="form-group">
+            <label for="confirm">Repeat Password</label>
+            <input
+              type="password"
+              class="form-control"
+              id="new_password2"
+              name="new_password2"
+              placeholder="Repeat password"
+              required
+            />
+          </div>
+          <br>
+          <button type="submit" class="btn btn-secondary" name="action" value="resetPassword">Reset Password</button>
+          <br>
+        </form>
+      </div>
+    </div>  
+    {% endif %}
+
     {% endblock %}
     
