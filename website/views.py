@@ -21,7 +21,7 @@ import json
 #my sarima codes
 from .sarimaauto import forecastAllRecipes, checkForecastDates, forecastAllRecipesnotAuto, getLastCalibrationDate
 
-from .misc_util import dateToWords, get_dates_with_no_entries, upload_excel_to_db, export_db_to_excel
+from .misc_util import dateToWords, get_dates_with_no_entries, upload_excel_to_db, export_db_to_excel, import_inventory_from_excel
 
 
 import pandas as pd
@@ -1118,7 +1118,7 @@ def handle_file_action():
                 flash('Import Success', category='success')
             else:
                 flash('No file selected for import', category='error')
-            return redirect(url_for('views.handle_file_action'))
+            return redirect(url_for('views.dailyusage'))
 
         
         elif request.form['action'] == 'exportCSV':
@@ -1134,6 +1134,18 @@ def handle_file_action():
             except Exception as e:
                 flash(f'Export failed: {str(e)}', category='error')
             
+            return redirect(url_for('views.dailyusage'))
+        
+        elif request.form['action'] == 'importCSVInventory':
+            file = request.files.get('file')
+            if file:
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                import_inventory_from_excel(file_path)
+                flash('Inventory imported successfully', category='success')
+            else:
+                flash('No file selected for import', category='error')
             return redirect(url_for('views.dailyusage'))
 
     
@@ -1161,5 +1173,4 @@ def get_daily_sales():
     return jsonify([{
         'date': row.date.strftime('%Y-%m-%d'),
         'quantity': row.quantity
-    } for row in results])
-"""
+    } for row in results])"""

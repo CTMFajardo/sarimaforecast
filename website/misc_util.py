@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import func
-from .models import dailyUsedMenuItem,ForecastedValues
+from .models import dailyUsedMenuItem,ForecastedValues,Inventory
 import pandas as pd
 import numpy as np
 import logging
@@ -230,3 +230,90 @@ def upload_excel_to_db(file_path):
         db.session.rollback()
         logging.error(f"Error importing records: {e}")
         raise
+
+def import_inventory_from_excel(file_path):
+    """
+    Imports inventory data from Excel and uploads to database
+    Args:
+        file_path: Path to Excel file (must match Inventory model structure)
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    from sqlalchemy.exc import IntegrityError
+    
+    # 1. Delete all existing records (if needed)
+    try:
+        db.session.query(Inventory).delete()
+        db.session.commit()
+        logging.info("Cleared existing inventory data")
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Failed to clear existing data: {str(e)}")
+        return False, f"Database clearance failed: {str(e)}"
+
+    # 2. Load and validate Excel file
+    try:
+        df = pd.read_excel(file_path)
+        
+        # Convert date columns properly
+        if 'date' in df.columns:
+            df['date'] = pd.to_datetime(df['date']).dt.date
+            
+        # Fill missing values with defaults
+        defaults = {
+            'quantity': 0,
+            'stockAdd': 0,
+            'user_id': 6,  # May Castillo's ID
+            'postedBy': 'May Castillo'
+        }
+        
+        for col, default in defaults.items():
+            if col in df.columns:
+                df[col] = df[col].fillna(default)
+        
+    except Exception as e:
+        logging.error(f"Excel file error: {str(e)}")
+        return False, f"Invalid Excel file: {str(e)}"
+
+    # 3. Data validation
+    required_columns = ['inventoryItem', 'quantity', 'date']
+    missing_cols = [col for col in required_columns if col not in df.columns]
+    
+    if missing_cols:
+        error_msg = f"Missing required columns: {', '.join(missing_cols)}"
+        logging.error(error_msg)
+        return False, error_msg
+
+    # 4. Prepare database records
+    records = []
+    for _, row in df.iterrows():
+        try:
+            records.append(Inventory(
+                inventoryItem=str(row['inventoryItem']),
+                quantity=int(row['quantity']),
+                stockAdd=int(row.get('stockAdd', 0)),
+                date=row['date'],
+                user_id=int(row.get('user_id', 6)),
+                postedBy=str(row.get('postedBy', 'May Castillo'))
+            ))
+        except Exception as e:
+            logging.warning(f"Skipping invalid row {_}: {str(e)}")
+            continue
+
+    # 5. Bulk insert with error handling
+    try:
+        db.session.bulk_save_objects(records)
+        db.session.commit()
+        success_msg = f"Successfully imported {len(records)} inventory records"
+        logging.info(success_msg)
+        return True, success_msg
+    except IntegrityError as e:
+        db.session.rollback()
+        error_msg = f"Database integrity error: {str(e)}"
+        logging.error(error_msg)
+        return False, error_msg
+    except Exception as e:
+        db.session.rollback()
+        error_msg = f"Unexpected error: {str(e)}"
+        logging.error(error_msg)
+        return False, error_msg
