@@ -51,6 +51,7 @@
           </div>
           <div>
             <br><br>
+            <!--
             <h5>Current Ingredients:</h5>
             <ul class="list-group list-group-flush" id="currentIngredients">
               {% for tempIngredients in tempIngredients %}
@@ -61,7 +62,11 @@
                 </li>
               {% endfor %}
               </ul>
-
+              -->
+              <h5>Current Ingredients:</h5>
+              <ul class="list-group list-group-flush" id="currentIngredients" style="list-style-position: inside;">
+                <!-- Will be populated -->
+              </ul>
           </div>    
           <div class="form-group">
             <label for="ingredientListSelect">Ingredients: </label>
@@ -85,7 +90,8 @@
             <br>
             
             <div>
-              <button type="submit" class="btn btn-secondary" name="action" value="addTemp">Add to ingredients</button>
+              <!--button type="submit" class="btn btn-secondary" name="action" value="addTemp">Add to ingredients</button>-->
+              <button type="button" class="btn btn-secondary mt-2" id="addIngredientBtn">Add to ingredients</button>
             </div>
             
           </div>
@@ -125,6 +131,7 @@
         <div>
           <h1>{{ recipeName }}</h1>
           
+          <p> Number of Servings: {{ recipe.numberOfServings }}</p>
           <table class="table table-bordered">
             <thead>
               <tr>
@@ -230,6 +237,48 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set quantity and unit values
     document.getElementById('ingredientsQuantityEdit').value = link.getAttribute('data-quantity');
     document.getElementById('ingredientsUOMEdit').value = link.getAttribute('data-uom');
+  });
+});
+
+// Populate the current ingredients list
+document.addEventListener('DOMContentLoaded', function () {
+  const addBtn = document.getElementById('addIngredientBtn');
+
+  addBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+
+    const ingredient = document.getElementById('ingredientListSelect').value;
+    const quantity = document.getElementById('ingredientsQuantity').value;
+    const uom = document.getElementById('ingredientsUOM').value;
+
+    fetch('/add-temp-ingredient', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ingredient, quantity, uom })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        const list = document.getElementById('currentIngredients');
+        list.innerHTML = '';
+        data.ingredients.forEach(item => {
+          const li = document.createElement('li');
+          li.classList.add('list-group-item');
+          li.style.listStyleType = 'disc'; // ✅ bullet
+          li.style.marginLeft = '20px';    // ✅ indent
+          li.textContent = `${item.recipeIngredients} ${item.recipeQuantity} ${item.recipeUOM}`;
+          list.appendChild(li);
+        });
+      } else {
+        alert(data.message || 'Error adding ingredient');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An unexpected error occurred.');
+    });
   });
 });
 </script>

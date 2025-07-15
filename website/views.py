@@ -690,7 +690,8 @@ def recipecreate():
     
     recipeListSelection = request.form.get('recipeListSelect')
     filteredRecipeName = Recipe.query.filter_by(recipeName=recipeListSelection).all()
-
+    recipeCheck = Recipe.query.filter(func.lower(Recipe.recipeName) == 
+                        func.lower(recipeListSelection)).first()  
     
     if request.method == 'POST':
         if request.form['action'] == 'addTemp':
@@ -767,11 +768,13 @@ def recipecreate():
             db.session.commit()
             return redirect(url_for('views.recipecreate'))
         
-        if request.form['action'] == 'viewRecipe':            
+        if request.form['action'] == 'viewRecipe':        
+              
             return render_template('recipecreate.html',user=current_user,dateToday=formattedDate,
                                    allRecipes=allRecipes,distinctRecipe=distinctRecipe,
                                    recipeName=recipeListSelection, tempIngredients=tempIngredients,
-                                   filteredRecipeName=filteredRecipeName,allIngredients=allIngredients)
+                                   filteredRecipeName=filteredRecipeName,allIngredients=allIngredients,
+                                   recipe=recipeCheck)
         if request.form['action'] == 'removeRecipe':
             for recipe in filteredRecipeName:
                 db.session.delete(recipe)                
@@ -780,7 +783,8 @@ def recipecreate():
 
     return render_template("recipecreate.html",user=current_user,dateToday=formattedDate,
                            allIngredients=allIngredients, allRecipes=allRecipes,
-                           tempIngredients=tempIngredients,distinctRecipe=distinctRecipe)
+                           tempIngredients=tempIngredients,distinctRecipe=distinctRecipe,
+                           recipe=recipeCheck)
 
 #@views.route('/recipelist', methods=['GET','POST'])
 #@login_required
@@ -1150,6 +1154,38 @@ def handle_file_action():
 
     
     return redirect(url_for("views.dailyusage")) 
+
+@views.route('/add-temp-ingredient', methods=['POST'])
+@login_required
+def add_temp_ingredient():
+    data = request.get_json()
+    ingredientName = data.get('ingredient')
+    ingredientQuantity = data.get('quantity')
+    ingredientUOM = data.get('uom')
+
+    if not ingredientQuantity:
+        return jsonify(success=False, message='Input Quantity')
+
+    existing = TempIngredients.query.filter_by(recipeIngredients=ingredientName).first()
+    if existing:
+        return jsonify(success=False, message='Ingredient already in list')
+
+    new_ingredient = TempIngredients(
+        recipeIngredients=ingredientName,
+        recipeQuantity=ingredientQuantity,
+        recipeUOM=ingredientUOM
+    )
+    db.session.add(new_ingredient)
+    db.session.commit()
+
+    all_ingredients = TempIngredients.query.all()
+    ingredients_list = [{
+        'recipeIngredients': i.recipeIngredients,
+        'recipeQuantity': i.recipeQuantity,
+        'recipeUOM': i.recipeUOM
+    } for i in all_ingredients]
+
+    return jsonify(success=True, ingredients=ingredients_list)
 
 
 """@views.route('/get_daily_sales')

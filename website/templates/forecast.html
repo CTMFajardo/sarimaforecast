@@ -91,6 +91,7 @@
                                     <th>Ingredient Name</th>
                                     <th>Total Forecasted Quantity</th>
                                     <th>Unit of Measure</th>
+                                    <th>Converted Value</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -319,7 +320,8 @@ document.addEventListener('DOMContentLoaded', function () {
         columns: [
             { title: "Ingredient Name" },
             { title: "Total Forecasted Quantity" },
-            { title: "Unit of Measure" }
+            { title: "Unit of Measure" },
+            { title: "Converted Value" }
         ],
         data: [], // Start with empty data
         language: {
@@ -350,11 +352,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 
                 if (data && data.length > 0) {
                     // Prepare data in correct format for DataTables
-                    const tableData = data.map(row => [
-                        row.ingredient,
-                        Math.round(row.total),
-                        row.unit
-                    ]);
+                    const tableData = data.map(row => {
+                        const totalQty = Math.round(row.total);
+                        const converted = row.unit.toLowerCase() === 'serving'
+                            ? `${totalQty * 200} g`
+                            : 'N/A';
+
+                        return [
+                            row.ingredient,
+                            totalQty,
+                            row.unit,
+                            converted
+                        ];
+                    });
                     
                     // Add new data
                     groceryTable.rows.add(tableData).draw();
