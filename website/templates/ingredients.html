@@ -25,7 +25,9 @@
                     type="text"        
                     id="ingredientName"
                     name="ingredientName"
-                    placeholder="Enter Ingredient name"/>
+                    placeholder="Enter Ingredient name"
+                    required
+                    />
                 </td>
               </tr>
               <tr>
@@ -36,6 +38,7 @@
                     id="minimumStock"
                     name="minimumStock"
                     placeholder="Par stock"
+                    required
                     min="1" 
                     oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null"
                   />                 
@@ -48,6 +51,7 @@
                     type="text"        
                     id="unitOfMeasure"
                     name="unitOfMeasure"
+                    required
                     placeholder="UoM"/>
                 </td>
               </tr>
